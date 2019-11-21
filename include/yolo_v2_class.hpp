@@ -1,6 +1,7 @@
 #ifndef YOLO_V2_CLASS_HPP
 #define YOLO_V2_CLASS_HPP
 
+
 #ifndef LIB_API
 #ifdef LIB_EXPORTS
 #if defined(_MSC_VER)

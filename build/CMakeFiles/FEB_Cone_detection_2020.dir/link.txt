@@ -1,0 +1,1 @@
+/usr/bin/c++     CMakeFiles/FEB_Cone_detection_2020.dir/src/detect_cone.cpp.o  -o FEB_Cone_detection_2020 
