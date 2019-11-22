@@ -8,6 +8,10 @@ link_directories(./libraries)
 include_directories(./include)
 
 add_executable(Cone_detector ./src/detect_cone.cpp)
+add_executable(calibrate ./src/calibrate.cpp)
+add_executable(calibrate_pics ./src/calibrate_pics.cpp)
 
 Target_link_libraries(Cone_detector dark ${OpenCV_LIBS})
+Target_link_libraries(calibrate dark ${OpenCV_LIBS})
+Target_link_libraries(calibrate_pics dark ${OpenCV_LIBS})
 

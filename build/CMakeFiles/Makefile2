@@ -60,6 +60,43 @@ CMAKE_SOURCE_DIR = /home/ward/yolow/FEB_Cone_detection_2020
 CMAKE_BINARY_DIR = /home/ward/yolow/FEB_Cone_detection_2020/build
 
 #=============================================================================
+# Target rules for target CMakeFiles/calibrate_pics.dir
+
+# All Build rule for target.
+CMakeFiles/calibrate_pics.dir/all:
+	$(MAKE) -f CMakeFiles/calibrate_pics.dir/build.make CMakeFiles/calibrate_pics.dir/depend
+	$(MAKE) -f CMakeFiles/calibrate_pics.dir/build.make CMakeFiles/calibrate_pics.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/ward/yolow/FEB_Cone_detection_2020/build/CMakeFiles --progress-num=5,6 "Built target calibrate_pics"
+.PHONY : CMakeFiles/calibrate_pics.dir/all
+
+# Include target in all.
+all: CMakeFiles/calibrate_pics.dir/all
+
+.PHONY : all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/calibrate_pics.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/ward/yolow/FEB_Cone_detection_2020/build/CMakeFiles 2
+	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/calibrate_pics.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/ward/yolow/FEB_Cone_detection_2020/build/CMakeFiles 0
+.PHONY : CMakeFiles/calibrate_pics.dir/rule
+
+# Convenience name for target.
+calibrate_pics: CMakeFiles/calibrate_pics.dir/rule
+
+.PHONY : calibrate_pics
+
+# clean rule for target.
+CMakeFiles/calibrate_pics.dir/clean:
+	$(MAKE) -f CMakeFiles/calibrate_pics.dir/build.make CMakeFiles/calibrate_pics.dir/clean
+.PHONY : CMakeFiles/calibrate_pics.dir/clean
+
+# clean rule for target.
+clean: CMakeFiles/calibrate_pics.dir/clean
+
+.PHONY : clean
+
+#=============================================================================
 # Target rules for target CMakeFiles/Cone_detector.dir
 
 # All Build rule for target.
@@ -93,6 +130,43 @@ CMakeFiles/Cone_detector.dir/clean:
 
 # clean rule for target.
 clean: CMakeFiles/Cone_detector.dir/clean
+
+.PHONY : clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/calibrate.dir
+
+# All Build rule for target.
+CMakeFiles/calibrate.dir/all:
+	$(MAKE) -f CMakeFiles/calibrate.dir/build.make CMakeFiles/calibrate.dir/depend
+	$(MAKE) -f CMakeFiles/calibrate.dir/build.make CMakeFiles/calibrate.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/ward/yolow/FEB_Cone_detection_2020/build/CMakeFiles --progress-num=3,4 "Built target calibrate"
+.PHONY : CMakeFiles/calibrate.dir/all
+
+# Include target in all.
+all: CMakeFiles/calibrate.dir/all
+
+.PHONY : all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/calibrate.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/ward/yolow/FEB_Cone_detection_2020/build/CMakeFiles 2
+	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/calibrate.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/ward/yolow/FEB_Cone_detection_2020/build/CMakeFiles 0
+.PHONY : CMakeFiles/calibrate.dir/rule
+
+# Convenience name for target.
+calibrate: CMakeFiles/calibrate.dir/rule
+
+.PHONY : calibrate
+
+# clean rule for target.
+CMakeFiles/calibrate.dir/clean:
+	$(MAKE) -f CMakeFiles/calibrate.dir/build.make CMakeFiles/calibrate.dir/clean
+.PHONY : CMakeFiles/calibrate.dir/clean
+
+# clean rule for target.
+clean: CMakeFiles/calibrate.dir/clean
 
 .PHONY : clean
 

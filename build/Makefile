@@ -56,17 +56,6 @@ CMAKE_BINARY_DIR = /home/ward/yolow/FEB_Cone_detection_2020/build
 #=============================================================================
 # Targets provided globally by CMake.
 
-# Special rule for the target rebuild_cache
-rebuild_cache:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
-	/usr/bin/cmake -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
-.PHONY : rebuild_cache
-
-# Special rule for the target rebuild_cache
-rebuild_cache/fast: rebuild_cache
-
-.PHONY : rebuild_cache/fast
-
 # Special rule for the target edit_cache
 edit_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "No interactive CMake dialog available..."
@@ -77,6 +66,17 @@ edit_cache:
 edit_cache/fast: edit_cache
 
 .PHONY : edit_cache/fast
+
+# Special rule for the target rebuild_cache
+rebuild_cache:
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
+	/usr/bin/cmake -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
+.PHONY : rebuild_cache
+
+# Special rule for the target rebuild_cache
+rebuild_cache/fast: rebuild_cache
+
+.PHONY : rebuild_cache/fast
 
 # The main all target
 all: cmake_check_build_system
@@ -111,6 +111,19 @@ depend:
 .PHONY : depend
 
 #=============================================================================
+# Target rules for targets named calibrate_pics
+
+# Build rule for target.
+calibrate_pics: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 calibrate_pics
+.PHONY : calibrate_pics
+
+# fast build rule for target.
+calibrate_pics/fast:
+	$(MAKE) -f CMakeFiles/calibrate_pics.dir/build.make CMakeFiles/calibrate_pics.dir/build
+.PHONY : calibrate_pics/fast
+
+#=============================================================================
 # Target rules for targets named Cone_detector
 
 # Build rule for target.
@@ -122,6 +135,73 @@ Cone_detector: cmake_check_build_system
 Cone_detector/fast:
 	$(MAKE) -f CMakeFiles/Cone_detector.dir/build.make CMakeFiles/Cone_detector.dir/build
 .PHONY : Cone_detector/fast
+
+#=============================================================================
+# Target rules for targets named calibrate
+
+# Build rule for target.
+calibrate: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 calibrate
+.PHONY : calibrate
+
+# fast build rule for target.
+calibrate/fast:
+	$(MAKE) -f CMakeFiles/calibrate.dir/build.make CMakeFiles/calibrate.dir/build
+.PHONY : calibrate/fast
+
+src/calibrate.o: src/calibrate.cpp.o
+
+.PHONY : src/calibrate.o
+
+# target to build an object file
+src/calibrate.cpp.o:
+	$(MAKE) -f CMakeFiles/calibrate.dir/build.make CMakeFiles/calibrate.dir/src/calibrate.cpp.o
+.PHONY : src/calibrate.cpp.o
+
+src/calibrate.i: src/calibrate.cpp.i
+
+.PHONY : src/calibrate.i
+
+# target to preprocess a source file
+src/calibrate.cpp.i:
+	$(MAKE) -f CMakeFiles/calibrate.dir/build.make CMakeFiles/calibrate.dir/src/calibrate.cpp.i
+.PHONY : src/calibrate.cpp.i
+
+src/calibrate.s: src/calibrate.cpp.s
+
+.PHONY : src/calibrate.s
+
+# target to generate assembly for a file
+src/calibrate.cpp.s:
+	$(MAKE) -f CMakeFiles/calibrate.dir/build.make CMakeFiles/calibrate.dir/src/calibrate.cpp.s
+.PHONY : src/calibrate.cpp.s
+
+src/calibrate_pics.o: src/calibrate_pics.cpp.o
+
+.PHONY : src/calibrate_pics.o
+
+# target to build an object file
+src/calibrate_pics.cpp.o:
+	$(MAKE) -f CMakeFiles/calibrate_pics.dir/build.make CMakeFiles/calibrate_pics.dir/src/calibrate_pics.cpp.o
+.PHONY : src/calibrate_pics.cpp.o
+
+src/calibrate_pics.i: src/calibrate_pics.cpp.i
+
+.PHONY : src/calibrate_pics.i
+
+# target to preprocess a source file
+src/calibrate_pics.cpp.i:
+	$(MAKE) -f CMakeFiles/calibrate_pics.dir/build.make CMakeFiles/calibrate_pics.dir/src/calibrate_pics.cpp.i
+.PHONY : src/calibrate_pics.cpp.i
+
+src/calibrate_pics.s: src/calibrate_pics.cpp.s
+
+.PHONY : src/calibrate_pics.s
+
+# target to generate assembly for a file
+src/calibrate_pics.cpp.s:
+	$(MAKE) -f CMakeFiles/calibrate_pics.dir/build.make CMakeFiles/calibrate_pics.dir/src/calibrate_pics.cpp.s
+.PHONY : src/calibrate_pics.cpp.s
 
 src/detect_cone.o: src/detect_cone.cpp.o
 
@@ -156,9 +236,17 @@ help:
 	@echo "... all (the default if no target is provided)"
 	@echo "... clean"
 	@echo "... depend"
+	@echo "... edit_cache"
+	@echo "... calibrate_pics"
 	@echo "... rebuild_cache"
 	@echo "... Cone_detector"
-	@echo "... edit_cache"
+	@echo "... calibrate"
+	@echo "... src/calibrate.o"
+	@echo "... src/calibrate.i"
+	@echo "... src/calibrate.s"
+	@echo "... src/calibrate_pics.o"
+	@echo "... src/calibrate_pics.i"
+	@echo "... src/calibrate_pics.s"
 	@echo "... src/detect_cone.o"
 	@echo "... src/detect_cone.i"
 	@echo "... src/detect_cone.s"
