@@ -58,60 +58,29 @@ void show_msg_in_double_feed(VideoCapture cap1, VideoCapture cap2, string messag
   }
 }
 
-
-
-int main(int, char** argv)
+void extrinsics_pics(String location, VideoCapture cap1, VideoCapture cap2)
 {
-
-  std::string picfilename;
-
-  VideoCapture cap1;
-  VideoCapture cap2;
-
-  cap1.open(0);
-  cap2.open(2);
-
-  cap1.set(CAP_PROP_FRAME_HEIGHT, 720);
-  cap1.set(CAP_PROP_FRAME_WIDTH, 1280);
-  cap2.set(CAP_PROP_FRAME_HEIGHT, 720);
-  cap2.set(CAP_PROP_FRAME_WIDTH, 1280);
-
-  FileStorage fs("pairlist.xml", FileStorage::WRITE);
-
-  std::string picpath = "./calibrationpics/";
-  std::string picext = ".jpg";
+  std::thread t_cap1;
+  std::thread t_cap2;
 
   Mat frame1;
   Mat frame2;
 
   Mat concatframe;
 
-  int sectime = 0;
-
-  for(int i = 0; i < sectime*30; i++)
-  {
-    cap1 >> frame1;
-    cap2 >> frame2;
-
-        
-    hconcat(frame1, frame2, concatframe);
-    flip(concatframe, concatframe, 1);
-    resize(concatframe, concatframe, Size(1280,360));
-    putText(concatframe, to_string(sectime-i/30), Point(50,50), FONT_HERSHEY_PLAIN, 4, cv::Scalar(0,255,100), 2);
-    imshow("yeet", concatframe);
-    waitKey(1);
-  }
+  std::string picfilename;
 
   int multiplier = 10;
   int pics = 30;
 
+  FileStorage fs("pairlist.xml", FileStorage::WRITE);
   fs << "strings" << "["; 
   show_msg_in_double_feed(cap1, cap2, "calibrating extrinsics");
-
+  
   for(int i = 0; i < pics*multiplier; i++)
   {
-    std::thread t_cap1;
-    std::thread t_cap2;
+
+    
 
     t_cap2 = std::thread([&]()
     {
@@ -131,7 +100,7 @@ int main(int, char** argv)
     if(i%multiplier == 0){
       std::string nr = to_string(i*2/multiplier);
       picfilename = "pic" + std::string(5 - nr.length(), '0') + nr + ".jpg";
-      string fullpath = picpath + "extr/" + picfilename;
+      string fullpath = location + picfilename;
       printf("%s\n", fullpath.c_str());
       imwrite(fullpath, frame1);
       fs << (fullpath).c_str();
@@ -139,7 +108,7 @@ int main(int, char** argv)
 
       nr = to_string(i*2/multiplier+1);
       picfilename = "pic" + std::string(5 - nr.length(), '0') + nr + ".jpg";
-      fullpath = picpath + "extr/" + picfilename;
+      fullpath = location + picfilename;
       imwrite(fullpath, frame2);
       fs << (fullpath).c_str();
     }
@@ -158,21 +127,33 @@ int main(int, char** argv)
   fs << "]";
   fs.release();
 
+}
+
+void cam1_pics(String location, VideoCapture cap)
+{
+
+ 
+  
+  Mat frame;
+  std::string picfilename;
+
+  int multiplier = 10;
+  int pics = 30;
+
   FileStorage fs1("imglist1.xml", FileStorage::WRITE);
   fs1 << "strings" << "["; 
 
-  show_msg_in_feed(cap1, "calibrating camera 1");
+  show_msg_in_feed(cap, "calibrating camera 1");
 
   for(int i = 0; i < pics*multiplier; i++)
   {
 
-    Mat frame;
-    cap1 >> frame; 
+    cap >> frame; 
    
     if(i%multiplier == 0){
       std::string nr = to_string(i/multiplier);
       picfilename = "pic" + std::string(5 - nr.length(), '0') + nr + ".jpg";
-      string fullpath = picpath + "cam1/" + picfilename;
+      string fullpath = location + picfilename;
       imwrite(fullpath, frame);
       fs1 << (fullpath).c_str();
     }
@@ -186,23 +167,32 @@ int main(int, char** argv)
 
   fs1 << "]";
   fs1.release();
+}
+
+void cam2_pics(String location, VideoCapture cap)
+{
+  Mat frame;
+  std::string picfilename;
+
+  int multiplier = 10;
+  int pics = 30;
 
   FileStorage fs2("imglist2.xml", FileStorage::WRITE);
   fs2 << "strings" << "[";  
 
-  show_msg_in_feed(cap2, "calibrating camera 2");
+  show_msg_in_feed(cap, "calibrating camera 2");
 
   for(int i = 0; i < pics*multiplier; i++)
   {
 
-    Mat frame;
-    cap2 >> frame; 
+    
+    cap >> frame; 
    
     if(i%multiplier == 0){
       std::string nr = to_string(i/multiplier);
       picfilename = "pic" + std::string(5 - nr.length(), '0') + nr + ".jpg";
       
-      string fullpath = picpath + "cam2/" + picfilename;
+      string fullpath = location + picfilename;
       imwrite(fullpath, frame);
       fs2 << (fullpath).c_str();
     }
@@ -216,6 +206,53 @@ int main(int, char** argv)
 
   fs2 << "]";
   fs2.release();
+  
+}
+
+void ground_pic(VideoCapture cap)
+{
+  show_msg_in_feed(cap, "ground pattern");
+
+  Mat frame;
+  cap >> frame; 
+  imwrite("groundpattern.jpg", frame);
+  
+}
+
+
+
+int main(int argc, char** argv)
+{
+
+  
+
+  VideoCapture cap1;
+  VideoCapture cap2;
+
+  cap1.open(0);
+  cap2.open(2);
+
+  cap1.set(CAP_PROP_FRAME_HEIGHT, 720);
+  cap1.set(CAP_PROP_FRAME_WIDTH, 1280);
+  cap2.set(CAP_PROP_FRAME_HEIGHT, 720);
+  cap2.set(CAP_PROP_FRAME_WIDTH, 1280);
+
+  std::string picpath = "./calibrationpics/";
+  std::string picext = ".jpg";
+
+  
+
+  
+
+  if (0 == strcmp(argv[1], "extr")){
+        extrinsics_pics(picpath + "extr/", cap1, cap2);
+    } else if (0 == strcmp(argv[1], "cam1")){
+        cam1_pics(picpath + "cam1/", cap1);
+    } else if (0 == strcmp(argv[1], "cam2")){
+        cam2_pics(picpath + "cam2/", cap2);
+    } else if (0 == strcmp(argv[1], "ground")){
+        ground_pic(cap1);
+    }
 
 
   return 0;
