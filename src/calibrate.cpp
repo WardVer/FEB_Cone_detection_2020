@@ -247,8 +247,8 @@ StereoCalib(const vector<string>& pairImagelist, const vector<string>& imagelist
             imshow("yoink", img2);
             waitKey(0);*/
 
-            cout << endl << "corners1= " << corners1 << endl << endl;
-            cout << endl << "corners2= " << corners2 << endl << endl;
+            //cout << endl << "corners1= " << corners1 << endl << endl;
+            //cout << endl << "corners2= " << corners2 << endl << endl;
             cout << i << ". Found corners!" << endl;
             pairImagePoints[0].push_back(corners1);
             pairImagePoints[1].push_back(corners2);
@@ -267,128 +267,6 @@ StereoCalib(const vector<string>& pairImagelist, const vector<string>& imagelist
 
     float rms = stereoCalibrate(pairObjectPoints, pairImagePoints[0], pairImagePoints[1], K[0], D[0], K[1], D[1], imageSize, R, T, E, F, CALIB_FIX_INTRINSIC, cv::TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 300, 0.00000001));
     cout << "rms: " << rms << endl;
-
-    const string& filename3 = imagelist1[3];
-    img = imread(filename3);
-    undistort(img, dst, K[0], D[0]);
-
-    while(1)
-    {
-        imshow("distorted", img);
-        int key = waitKey(0);
-        if(key == 27) break;
-        imshow("distorted", dst);
-        key = waitKey(0);
-        if(key == 27) break;
-    }
-
-    const string& filename4 = imagelist2[3];
-    img = imread(filename4);
-    undistort(img, dst, K[1], D[1]);
-
-    while(1)
-    {
-        imshow("distorted", img);
-        int key = waitKey(0);
-        if(key == 27) break;
-        imshow("distorted", dst);
-        key = waitKey(0);
-        if(key == 27) break;
-    }
-    /*
-
-    for( i = j = 0; i < nPairImages; i++ )
-    {
-        for( k = 0; k < 2; k++ )
-        {
-            const string& filename = pairImagelist[i*2+k];
-            Mat img = imread(filename, 0);
-
-            if(img.empty())
-                break;
-            if( imageSize == Size() )
-                imageSize = img.size();
-            else if( img.size() != imageSize )
-            {
-                cout << "The image " << filename << " has the size different from the first image size. Skipping the pair\n";
-                break;
-            }
-
-            bool found = false;
-            vector<Point2f>& corners = pairImagePoints[k][j];
-            for( int scale = 1; scale <= maxScale; scale++ )
-            {
-                Mat timg;
-                if( scale == 1 )
-                    timg = img;
-                else
-                    resize(img, timg, Size(), scale, scale, INTER_LINEAR_EXACT);
-                found = findChessboardCorners(timg, boardSize, corners,
-                    CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_NORMALIZE_IMAGE);
-                if( found )
-                {
-                    if( scale > 1 )
-                    {
-                        Mat cornersMat(corners);
-                        cornersMat *= 1./scale;
-                    }
-                    break;
-                }
-            }
-
-            if( displayCorners )
-            {
-                cout << filename << endl;
-                Mat cimg, cimg1;
-                cvtColor(img, cimg, COLOR_GRAY2BGR);
-                drawChessboardCorners(cimg, boardSize, corners, found);
-                double sf = 640./MAX(img.rows, img.cols);
-                resize(cimg, cimg1, Size(), sf, sf, INTER_LINEAR_EXACT);
-                imshow("corners", cimg1);
-                char c = (char)waitKey(500);
-                if( c == 27 || c == 'q' || c == 'Q' ) //Allow ESC to quit
-                    exit(-1);
-            }
-            else
-                putchar('.');
-            if( !found )
-                break;
-            cornerSubPix(img, corners, Size(11,11), Size(-1,-1),
-                         TermCriteria(TermCriteria::COUNT+TermCriteria::EPS,
-                                      30, 0.01));
-        }
-        if( k == 2 )
-        {
-            goodPairImageList.push_back(pairImagelist[i*2]);
-            goodPairImageList.push_back(pairImagelist[i*2+1]);
-            j++;
-        }
-    }
-    cout << j << " pairs have been successfully detected.\n";
-    nPairImages = j;
-    if( nPairImages < 2 )
-    {
-        cout << "Error: too little pairs to run the calibration\n";
-        return;
-    }
-
-    pairImagePoints[0].resize(nPairImages);
-    pairImagePoints[1].resize(nPairImages);
-    pairObjectPoints.resize(nPairImages);
-
-    for( i = 0; i < nPairImages; i++ )
-    {
-        for( j = 0; j < boardSize.height; j++ )
-            for( k = 0; k < boardSize.width; k++ )
-                pairObjectPoints[i].push_back(Point3f(j*squareSize, k*squareSize, 0));
-    }
-
-    cout << "Running stereo calibration ...\n";
-
-    Mat R, T, E, F;
-    double rms = stereoCalibrate(pairObjectPoints, pairImagePoints[0], pairImagePoints[1], K[0], D[0], K[1], D[1], imageSize, R, T, E, F, CALIB_FIX_INTRINSIC);
-    cout << "done with RMS error=" << rms << endl;
-    */
 
 
     Mat R1, R2, P1, P2, Q;

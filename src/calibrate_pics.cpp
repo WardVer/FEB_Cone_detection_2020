@@ -37,7 +37,7 @@ void show_msg_in_feed(VideoCapture cap, string message)
 
 void show_msg_in_double_feed(VideoCapture cap1, VideoCapture cap2, string message)
 {
-  for(int i = 0; i < 120; i++)
+  for(int i = 0; i < 80; i++)
   {
 
     Mat frame1;
@@ -49,6 +49,7 @@ void show_msg_in_double_feed(VideoCapture cap1, VideoCapture cap2, string messag
  
     hconcat(frame1, frame2, concatframe);
     flip(concatframe, concatframe, 1);
+    resize(concatframe, concatframe, Size(1280,360));
     putText(concatframe, message, Point(50,100), FONT_HERSHEY_PLAIN, 4, cv::Scalar(0,255,100), 2);
     imshow("yeet", concatframe);
     waitKey(1);
@@ -70,6 +71,11 @@ int main(int, char** argv)
   cap1.open(0);
   cap2.open(2);
 
+  cap1.set(CAP_PROP_FRAME_HEIGHT, 720);
+  cap1.set(CAP_PROP_FRAME_WIDTH, 1280);
+  cap2.set(CAP_PROP_FRAME_HEIGHT, 720);
+  cap2.set(CAP_PROP_FRAME_WIDTH, 1280);
+
   FileStorage fs("pairlist.xml", FileStorage::WRITE);
 
   std::string picpath = "./calibrationpics/";
@@ -90,13 +96,14 @@ int main(int, char** argv)
         
     hconcat(frame1, frame2, concatframe);
     flip(concatframe, concatframe, 1);
+    resize(concatframe, concatframe, Size(1280,360));
     putText(concatframe, to_string(sectime-i/30), Point(50,50), FONT_HERSHEY_PLAIN, 4, cv::Scalar(0,255,100), 2);
     imshow("yeet", concatframe);
     waitKey(1);
   }
 
-  int multiplier = 20;
-  int pics = 20;
+  int multiplier = 10;
+  int pics = 30;
 
   fs << "strings" << "["; 
   show_msg_in_double_feed(cap1, cap2, "calibrating extrinsics");
@@ -140,6 +147,7 @@ int main(int, char** argv)
 
     hconcat(frame1, frame2, concatframe);
     flip(concatframe, concatframe, 1);
+    resize(concatframe, concatframe, Size(1280,360));
     putText(concatframe, to_string(i/multiplier), Point(50,50), FONT_HERSHEY_PLAIN, 4, cv::Scalar(0,255,100), 2);
     imshow("yeet", concatframe);
     waitKey(1);
