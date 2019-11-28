@@ -7,14 +7,16 @@
 #IncludeRegexTransform: 
 
 /home/ward/yolow/FEB_Cone_detection_2020/src/calibrate.cpp
+opencv2/opencv.hpp
+-
 opencv2/calib3d.hpp
-/home/ward/yolow/FEB_Cone_detection_2020/src/opencv2/calib3d.hpp
+-
 opencv2/imgcodecs.hpp
-/home/ward/yolow/FEB_Cone_detection_2020/src/opencv2/imgcodecs.hpp
+-
 opencv2/highgui.hpp
-/home/ward/yolow/FEB_Cone_detection_2020/src/opencv2/highgui.hpp
+-
 opencv2/imgproc.hpp
-/home/ward/yolow/FEB_Cone_detection_2020/src/opencv2/imgproc.hpp
+-
 vector
 -
 string
@@ -30,6 +32,8 @@ stdio.h
 stdlib.h
 -
 ctype.h
+-
+thread
 -
 
 /usr/local/include/opencv4/opencv2/calib3d.hpp

@@ -18,10 +18,11 @@
      GitHub:        https://github.com/opencv/opencv/
    ************************************************** */
 
-#include "opencv2/calib3d.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgproc.hpp"
+#include <opencv2/opencv.hpp>
+#include <opencv2/calib3d.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
 
 #include <vector>
 #include <string>
@@ -31,6 +32,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <thread>
+
 
 using namespace cv;
 using namespace std;
@@ -51,105 +54,6 @@ static int print_help()
 }
 
 
-
-vector<Mat> cam_pose_to_origin(Size boardSize, float squareSize, Mat K, Mat D)
-{
-    vector<Point2f> imgPts;
-    vector<Point3f> objPts;
-
-
-    vector<Mat> vecs;
-    Mat rvec;
-    Mat tvec;
-
-    bool found = false;
-
-    Mat groundpic = imread("groundpattern.jpg");
-    Mat gray;
-    cvtColor(groundpic, gray, COLOR_BGR2GRAY);
-   
-    found = cv::findChessboardCorners(gray, boardSize, imgPts,
-                            CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_FILTER_QUADS);
-    if (found)
-    {
-        cornerSubPix(gray, imgPts, cv::Size(5, 5), cv::Size(-1, -1),
-            TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.1));
-    }
-
-    for( int j = 0; j < boardSize.height; j++ )
-            for( int k = 0; k < boardSize.width; k++ )
-                objPts.push_back(Point3f(j*squareSize, k*squareSize, 0));
-    
-    
-    
-
-    solvePnP(objPts, imgPts, K, D, rvec, tvec);
-    
-    
-    Mat newvec;
-    Mat newvec_t;
-
-    _Float64 x_offset = 0;
-    _Float64 y_offset = 0;
-    _Float64 z_offset = 0;
-
-    Rodrigues(rvec, newvec);
-
-    newvec.copyTo(newvec_t);
-
-    Mat column = (0-newvec_t.col(2));
-    column.copyTo(newvec.col(1));
-
-    column = (newvec_t.col(1));
-    column.copyTo(newvec.col(0));
-
-    column = (0-newvec_t.col(0));
-    column.copyTo(newvec.col(2));
-
-
-    newvec = newvec.inv();
-
-    for(int e = 0; e < 3; e++)
-    {
-        column = newvec.col(e);
-        x_offset += tvec.at<_Float64>(e) * column.at<_Float64>(0);
-        y_offset += tvec.at<_Float64>(e) * column.at<_Float64>(1);
-        z_offset += tvec.at<_Float64>(e) * column.at<_Float64>(2);
-    }
-    _Float64 data[] = {x_offset, y_offset, z_offset};
-    Mat offset_vec(3,1,CV_64FC1,data);
-    cout << newvec << endl;
-    cout << rvec << endl;
-    cout << offset_vec << endl;
-    Rodrigues(newvec, rvec);
-
-
-    
-
-    vecs.push_back(rvec);
-    vecs.push_back(tvec);
-
-    /*
-    vector<Point3f> axis;
-    vector<Point2f> prjPts;
-
-    axis.push_back(Point3f(5,0,0));
-    axis.push_back(Point3f(0,5,0));
-    axis.push_back(Point3f(0,0,5));
-    
-    cout << tvec << endl;
-    projectPoints(axis, rvec, tvec, K, D, prjPts);
-
-    line(groundpic, imgPts[0], prjPts[0], Scalar(255,0,0), 3);
-    line(groundpic, imgPts[0], prjPts[1], Scalar(0,255,0), 3);
-    line(groundpic, imgPts[0], prjPts[2], Scalar(0,0,255), 3);
-
-    imshow("yoink", groundpic);
-    waitKey(0);*/
-
-    return vecs;
-
-}
 
 static void
 StereoCalib(const vector<string>& pairImagelist, const vector<string>& imagelist1, const vector<string>& imagelist2, Size boardSize, float squareSize, bool displayCorners = false, bool useCalibrated=true, bool showRectified=true)
@@ -270,9 +174,6 @@ StereoCalib(const vector<string>& pairImagelist, const vector<string>& imagelist
     vector< Mat > rvecs1, tvecs1, rvecs2, tvecs2;
     calibrateCamera(intrObjectPoints1, intrImagePoints1, imageSize, K[0], D[0], rvecs1, tvecs1);
     calibrateCamera(intrObjectPoints2, intrImagePoints2, imageSize, K[1], D[1], rvecs2, tvecs2);
-
-
-    cam_pose_to_origin(boardSize, squareSize, K[0], D[0]);
 
 
     const string& filename1 = imagelist1[3];
