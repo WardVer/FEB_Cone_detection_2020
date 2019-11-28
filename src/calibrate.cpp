@@ -263,7 +263,7 @@ StereoCalib(const vector<string>& pairImagelist, const vector<string>& imagelist
     }
     nPairImages = pairObjectPoints.size();
     Mat R, F, E;
-    Vec3d T;
+    Mat T;
 
     int flag = 0;
     flag |= CALIB_FIX_INTRINSIC;
@@ -271,24 +271,32 @@ StereoCalib(const vector<string>& pairImagelist, const vector<string>& imagelist
     float rms = stereoCalibrate(pairObjectPoints, pairImagePoints[0], pairImagePoints[1], K[0], D[0], K[1], D[1], imageSize, R, T, E, F, CALIB_FIX_INTRINSIC, cv::TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 300, 0.00000001));
     cout << "rms: " << rms << endl;
 
-    //cout << "R: " << R << endl;
-
-    Mat R1, R2, P1, P2, Q;
-    Rect validRoi[2];
-
-    stereoRectify(K[0], D[0],
-                  K[1], D[1],
-                  imageSize, R, T, R1, R2, P1, P2, Q,
-                  CALIB_ZERO_DISPARITY, 1, imageSize, &validRoi[0], &validRoi[1]);
+    
     FileStorage fs;
-    fs.open("extrinsics.yml", FileStorage::WRITE);
+    fs.open("extrinsics.xml", FileStorage::WRITE);
     if( fs.isOpened() )
     {
-        fs << "R" << R << "T" << T << "R1" << R1 << "R2" << R2 << "P1" << P1 << "P2" << P2 << "Q" << Q;
+        fs << "R" << R << "T" << T;
         fs.release();
     }
     else
         cout << "Error: can not save the extrinsic parameters\n";
+    fs.release();
+
+
+    fs.open("intrinsics.xml", FileStorage::WRITE);
+    if( fs.isOpened() )
+    {
+        fs << "K1" << K[0] << "D1" << D[0] << "K2" << K[1] << "D2" << D[1];
+        fs.release();
+    }
+    else
+        cout << "Error: can not save the intrinsic parameters\n";
+    fs.release();
+
+    
+
+
 
     
     

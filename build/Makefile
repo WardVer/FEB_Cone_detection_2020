@@ -124,6 +124,32 @@ calibrate_pics/fast:
 .PHONY : calibrate_pics/fast
 
 #=============================================================================
+# Target rules for targets named calibrate
+
+# Build rule for target.
+calibrate: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 calibrate
+.PHONY : calibrate
+
+# fast build rule for target.
+calibrate/fast:
+	$(MAKE) -f CMakeFiles/calibrate.dir/build.make CMakeFiles/calibrate.dir/build
+.PHONY : calibrate/fast
+
+#=============================================================================
+# Target rules for targets named 3d
+
+# Build rule for target.
+3d: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 3d
+.PHONY : 3d
+
+# fast build rule for target.
+3d/fast:
+	$(MAKE) -f CMakeFiles/3d.dir/build.make CMakeFiles/3d.dir/build
+.PHONY : 3d/fast
+
+#=============================================================================
 # Target rules for targets named Cone_detector
 
 # Build rule for target.
@@ -136,18 +162,32 @@ Cone_detector/fast:
 	$(MAKE) -f CMakeFiles/Cone_detector.dir/build.make CMakeFiles/Cone_detector.dir/build
 .PHONY : Cone_detector/fast
 
-#=============================================================================
-# Target rules for targets named calibrate
+src/3d_functions.o: src/3d_functions.cpp.o
 
-# Build rule for target.
-calibrate: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 calibrate
-.PHONY : calibrate
+.PHONY : src/3d_functions.o
 
-# fast build rule for target.
-calibrate/fast:
-	$(MAKE) -f CMakeFiles/calibrate.dir/build.make CMakeFiles/calibrate.dir/build
-.PHONY : calibrate/fast
+# target to build an object file
+src/3d_functions.cpp.o:
+	$(MAKE) -f CMakeFiles/3d.dir/build.make CMakeFiles/3d.dir/src/3d_functions.cpp.o
+.PHONY : src/3d_functions.cpp.o
+
+src/3d_functions.i: src/3d_functions.cpp.i
+
+.PHONY : src/3d_functions.i
+
+# target to preprocess a source file
+src/3d_functions.cpp.i:
+	$(MAKE) -f CMakeFiles/3d.dir/build.make CMakeFiles/3d.dir/src/3d_functions.cpp.i
+.PHONY : src/3d_functions.cpp.i
+
+src/3d_functions.s: src/3d_functions.cpp.s
+
+.PHONY : src/3d_functions.s
+
+# target to generate assembly for a file
+src/3d_functions.cpp.s:
+	$(MAKE) -f CMakeFiles/3d.dir/build.make CMakeFiles/3d.dir/src/3d_functions.cpp.s
+.PHONY : src/3d_functions.cpp.s
 
 src/calibrate.o: src/calibrate.cpp.o
 
@@ -238,9 +278,13 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... calibrate_pics"
+	@echo "... calibrate"
+	@echo "... 3d"
 	@echo "... rebuild_cache"
 	@echo "... Cone_detector"
-	@echo "... calibrate"
+	@echo "... src/3d_functions.o"
+	@echo "... src/3d_functions.i"
+	@echo "... src/3d_functions.s"
 	@echo "... src/calibrate.o"
 	@echo "... src/calibrate.i"
 	@echo "... src/calibrate.s"

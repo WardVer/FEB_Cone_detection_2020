@@ -16,6 +16,7 @@
 #define GPU
 #define OPENCV
 
+#include "3d_functions.hpp"
 #include "yolo_v2_class.hpp"    // imported functions from DLL
 #include <opencv2/opencv.hpp>            // C++
 #include <opencv2/core/version.hpp>
@@ -114,6 +115,22 @@ int main(int argc, char *argv[])
                 cap.set(cv::CAP_PROP_FRAME_HEIGHT, 720);
                 cap.set(cv::CAP_PROP_FRAME_WIDTH, 1280);
                 cap >> cur_frame;
+
+
+                
+                cv::Mat R;
+                cv::Mat T;
+
+                cv::Mat K1;
+                cv::Mat K2;
+                cv::Mat D1;
+                cv::Mat D2;
+
+                read_extrinsics(&R, &T);
+                read_intrinsics(&K1, &D1, &K2, &D2);
+
+                std::vector<cv::Mat> camera_data;
+                camera_data = cam_pose_to_origin(cv::Size(9,6), 3.78f, K1, D1);
                 
 
                 cv::Size const frame_size = cur_frame.size();
@@ -125,6 +142,7 @@ int main(int argc, char *argv[])
                     std::shared_ptr<image_t> det_image;
                     std::vector<bbox_t> result_vec;
                     cv::Mat draw_frame;
+                    cv::Mat rough_3d;
                     bool new_detection;
                     uint64_t frame_id;
                     bool exit_flag;
@@ -133,9 +151,9 @@ int main(int argc, char *argv[])
 
                 const bool sync = detection_sync; // sync data exchange
                 send_one_replaceable_object_t<detection_data_t> cap2prepare, cap2draw,
-                    prepare2detect, detect2draw, draw2show, draw2write, draw2net;
+                    prepare2detect, detect2draw, draw2show, draw2write, draw2net, detect23d;
 
-                std::thread t_cap, t_prepare, t_detect, t_post, t_draw, t_write, t_network;
+                std::thread t_cap, t_prepare, t_detect, t_3d, t_post, t_draw, t_write, t_network;
 
                 // capture new video-frame
                 if (t_cap.joinable()) t_cap.join();
@@ -202,6 +220,7 @@ int main(int argc, char *argv[])
                         detection_data.new_detection = true;
                         detection_data.result_vec = result_vec;
                         detect2draw.send(detection_data);
+                        detect23d.send(detection_data);
                     } while (!detection_data.exit_flag);
                     std::cout << " t_detect exit \n";
                 });
@@ -230,6 +249,30 @@ int main(int argc, char *argv[])
 
                         detection_data.draw_frame = draw_frame;
                         draw2show.send(detection_data);
+                    } while (!detection_data.exit_flag);
+                    std::cout << " t_draw exit \n";
+                });
+
+                //estimate 3D
+                
+                t_3d = std::thread([&]()
+                {
+                    
+                    detection_data_t detection_data;
+                    do {
+
+                        detection_data = detect23d.receive();
+                        std::vector<bbox_t> const result_vec = detection_data.result_vec;
+                        cv::Mat rough_3d;
+                        for (auto &i : result_vec) {
+                            rough_3d = estimate_3d(i.x+i.w/2, i.y + i.h, K1, camera_data[0], camera_data[1]);
+
+                            
+                        }
+
+
+                        
+
                     } while (!detection_data.exit_flag);
                     std::cout << " t_draw exit \n";
                 });
