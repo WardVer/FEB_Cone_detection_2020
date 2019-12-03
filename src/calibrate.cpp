@@ -110,7 +110,7 @@ StereoCalib(const vector<string>& pairImagelist, const vector<string>& imagelist
             if (found)
             {
                 cornerSubPix(gray, corners, cv::Size(5, 5), cv::Size(-1, -1),
-                   TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.1));
+                   TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 3000, 0.000001));
                 drawChessboardCorners(img, boardSize, corners, found);
                 /*imshow("test", img);
                 waitKey(0);*/
@@ -134,7 +134,7 @@ StereoCalib(const vector<string>& pairImagelist, const vector<string>& imagelist
             if (found)
             {
                 cornerSubPix(img, corners, cv::Size(5, 5), cv::Size(-1, -1),
-                   TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.1));
+                   TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 3000, 0.000001));
                 drawChessboardCorners(img, boardSize, corners, found);
                 
                 
@@ -228,13 +228,13 @@ StereoCalib(const vector<string>& pairImagelist, const vector<string>& imagelist
         if (found1)
         {
             cv::cornerSubPix(gray1, corners1, cv::Size(5, 5), cv::Size(-1, -1),
-            cv::TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01));
+            cv::TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 300, 0.0000001));
             cv::drawChessboardCorners(img1, boardSize, corners1, found1);
         }
         if (found2)
         {
             cv::cornerSubPix(gray2, corners2, cv::Size(5, 5), cv::Size(-1, -1),
-            cv::TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01));
+            cv::TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 300, 0.0000001));
             cv::drawChessboardCorners(img2, boardSize, corners2, found2);
         }
 

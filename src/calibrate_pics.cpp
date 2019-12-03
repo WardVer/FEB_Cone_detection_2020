@@ -70,7 +70,7 @@ void extrinsics_pics(String location, VideoCapture cap1, VideoCapture cap2)
 
   std::string picfilename;
 
-  int multiplier = 10;
+  int multiplier = 20;
   int pics = 30;
 
   FileStorage fs("pairlist.xml", FileStorage::WRITE);
@@ -137,7 +137,7 @@ void cam1_pics(String location, VideoCapture cap)
   Mat frame;
   std::string picfilename;
 
-  int multiplier = 10;
+  int multiplier = 20;
   int pics = 30;
 
   FileStorage fs1("imglist1.xml", FileStorage::WRITE);
@@ -174,7 +174,7 @@ void cam2_pics(String location, VideoCapture cap)
   Mat frame;
   std::string picfilename;
 
-  int multiplier = 10;
+  int multiplier = 20;
   int pics = 30;
 
   FileStorage fs2("imglist2.xml", FileStorage::WRITE);
@@ -232,10 +232,10 @@ int main(int argc, char** argv)
   cap1.open(0);
   cap2.open(2);
 
-  cap1.set(CAP_PROP_FRAME_HEIGHT, 720);
-  cap1.set(CAP_PROP_FRAME_WIDTH, 1280);
-  cap2.set(CAP_PROP_FRAME_HEIGHT, 720);
-  cap2.set(CAP_PROP_FRAME_WIDTH, 1280);
+  cap1.set(CAP_PROP_FRAME_HEIGHT, 480);
+  cap1.set(CAP_PROP_FRAME_WIDTH, 640);
+  cap2.set(CAP_PROP_FRAME_HEIGHT, 480);
+  cap2.set(CAP_PROP_FRAME_WIDTH, 640);
 
   std::string picpath = "./calibrationpics/";
   std::string picext = ".jpg";

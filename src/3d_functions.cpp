@@ -1,5 +1,5 @@
 #include "3d_functions.hpp"
-#include <opencv2/sfm/projection.hpp>
+
 
 
 using namespace cv;
@@ -29,7 +29,7 @@ int read_extrinsics(cv::Mat *R, cv::Mat *T)
     return 0;
 }
 
-int read_intrinsics(cv::Mat *K1, cv::Mat *D1, cv::Mat *K2, cv::Mat *D2)
+int read_intrinsics(Mat *K1, Mat *D1, Mat *K2, Mat *D2)
 {
     FileStorage fs;
     fs.open("intrinsics.xml", FileStorage::READ);
@@ -79,7 +79,7 @@ vector<Mat> cam_pose_to_origin(Size boardSize, float squareSize, Mat K, Mat D)
                             CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_FILTER_QUADS);
     if (found)
     {
-        cornerSubPix(gray, imgPts, cv::Size(5, 5), cv::Size(-1, -1),
+        cornerSubPix(gray, imgPts, Size(5, 5), Size(-1, -1),
             TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.1));
     }
 
@@ -114,7 +114,6 @@ vector<Mat> cam_pose_to_origin(Size boardSize, float squareSize, Mat K, Mat D)
     column.copyTo(newvec.col(2));
 
     Mat test = newvec * tvec;
-    cout << test << endl;
 
     vecs.push_back(newvec);
     vecs.push_back(tvec);
@@ -124,34 +123,243 @@ vector<Mat> cam_pose_to_origin(Size boardSize, float squareSize, Mat K, Mat D)
 }
 
 
-cv::Mat estimate_3d_world(int cone_x, int cone_y, cv::Mat K, cv::Mat ground_R, cv::Mat ground_t)
+cv::Mat estimate_3d(int cone_x, int cone_y, Mat K, Mat ground_R, Mat ground_t)
 {
     
     
-    cv::Mat uvPoint = (cv::Mat_<double>(3,1) << cone_x, cone_y, 1); 
+    Mat uvPoint = (Mat_<double>(3,1) << cone_x, cone_y, 1); 
 
-    cv::Mat leftSideMat  = ground_R.inv() * K.inv() * uvPoint;
-    cv::Mat rightSideMat = ground_R.inv() * ground_t;
+    Mat leftSideMat  = ground_R.inv() * K.inv() * uvPoint;
+    Mat rightSideMat = ground_R.inv() * ground_t;
 
-    double s = rightSideMat.at<double>(1,0)/leftSideMat.at<double>(1,0); 
+    double s = rightSideMat.at<double>(1)/leftSideMat.at<double>(1); 
 
     Mat m_out = ground_R.inv() * (s * K.inv() * uvPoint - ground_t);
-    std::cout << "P = " << m_out << std::endl;
+    //cout << "rough_3d = " << m_out << endl;
     return m_out;
 }
 
 
-cv::Mat estimate_2d(cv::Mat rough_3d, cv::Mat R, cv::Mat T, cv::Mat K2, cv::Mat ground_R, cv::Mat ground_t)
+cv::Mat estimate_2d(Mat rough_3d, Mat R, Mat T, Mat K2, Mat ground_R, Mat ground_t)
 {
-    cv::Mat conepos_world_fromcamera = ground_R.inv()*ground_t + rough_3d;
-    cout << conepos_world_fromcamera << endl;
+    //cout << "gt: " << ground_t << endl;
+    //cout << "R: " << R << endl;
+    //cout << "T: " << T << endl;
 
-    P = projectionFromKRt(K2)
 
-    cv::Mat conepos_camera1 = ground_R*conepos_world_fromcamera;
-    cv::Mat right_side = K2 * 
+    Mat conepos_camera_fromcamera = ground_R * rough_3d + ground_t;
+
+    Mat rough_3d_h;
+    Mat one = Mat::ones(Size(1,1), CV_64FC1);
+    vconcat(conepos_camera_fromcamera, one, rough_3d_h);
+    //cout << "3d: " << rough_3d_h <<  endl;
+
+    Mat P;
+    hconcat(R,T,P);
+    P = K2 * P;
+    //cout << "P: " << P <<  endl;
+
+    cv::Mat rough_2d = P * rough_3d_h;
+
+   
+    rough_2d /= rough_2d.at<double>(2);
+
+    //cout << "2d: " << rough_2d <<  endl;
+    
+    return rough_2d;
+}
+
+std::vector<bbox_t> new_boxes(std::vector<bbox_t> result_vec, std::vector<Mat> rough_2d_vec)
+{
+    std::vector<bbox_t> new_2d;
+    
+    //cout << "size " << result_vec.size() << endl;
 
     
-   
+
+    for (int a = 0; a < result_vec.size(); a++)
+    {
+        bbox_t result_copy = result_vec[a];
+        result_copy.x = (int) rough_2d_vec[a].at<double>(0) - (int)(result_copy.w/2);
+        result_copy.y = (int) rough_2d_vec[a].at<double>(1) - (int)(result_copy.h);
+        new_2d.push_back(result_copy);
+    }
+
+    return new_2d;
+
+}
+
+Mat draw_features(Mat img1, Mat img2, vector<Point2f> corners1, vector<Point2f> corners2)
+{
+    Mat img1_copy;
+    Mat img2_copy;
+
+    img1.copyTo(img1_copy);
+    img2.copyTo(img2_copy);
+
+
+    for(int i = 0; i < corners1.size(); i++)
+    {
+        if(corners1[i].x >= 0 && corners1[i].y >= 0)
+        circle(img1_copy, corners1[i], 2, Scalar(0,255,0));
+    }
+
+    for(int i = 0; i < corners2.size(); i++)
+    {
+        if(corners2[i].x >= 0 && corners2[i].y >= 0)
+        circle(img2_copy, corners2[i], 2, Scalar(0,255,0));
+    }
+    
+
+
+    Mat concatcone;
+
+    hconcat(img1_copy, img2_copy, concatcone);
+
+    return concatcone;
+
+    
+
+
+}
+
+vector<Point> cone_offset(vector<bbox_t> result_vec1, vector<bbox_t> result_vec2, Mat img1, Mat img2)
+{
+    Mat img1ROI;
+    Mat img2ROI;
+
+    Mat gray1;
+    Mat gray2;
+
+    vector<Point> offsets;
+    for (int a = 0; a < result_vec1.size(); a++)
+    {
+        /*
+        int x1 = max((int)(result_vec1[a].x-result_vec1[a].w/4), 0);
+        int y1 = max((int)(result_vec1[a].y-result_vec1[a].h/4), 0);
+        int w1 = min((int)(result_vec1[a].w*1.5), img1.cols - (int)(result_vec1[a].x));
+        int h1 = min((int)(result_vec1[a].h*1.5), img1.rows - (int)(result_vec1[a].y));
+
+        int x2 = max((int)(result_vec2[a].x-result_vec2[a].w/4), 0);
+        int y2 = max((int)(result_vec2[a].y-result_vec2[a].h/4), 0);
+        int w2 = min((int)(result_vec2[a].w*1.5), img2.cols - (int)(result_vec2[a].x));
+        int h2 = min((int)(result_vec2[a].h*1.5), img2.rows - (int)(result_vec2[a].y));
+        */
+
+       
+        int x1 = max((int)result_vec1[a].x, 0);
+        int y1 = max((int)result_vec1[a].y, 0);
+        int w1 = min((int)(result_vec1[a].w), img1.cols - (int)(result_vec1[a].x));
+        int h1 = min((int)(result_vec1[a].h), img1.rows - (int)(result_vec1[a].y));
+
+        int x2 = max((int)(result_vec2[a].x), 0);
+        int y2 = max((int)(result_vec2[a].y), 0);
+        int w2 = min((int)(result_vec2[a].w), img2.cols - (int)(result_vec2[a].x));
+        int h2 = min((int)(result_vec2[a].h), img2.rows - (int)(result_vec2[a].y));
+        
+
+        int w = min(w1, w2);
+        int h = min(h1, h2);
+
+        
+        img1ROI = img1(Rect(x1, y1, w, h));
+        img2ROI = img2(Rect(x2, y2, w, h));
+
+        cvtColor(img1ROI, gray1, COLOR_BGR2GRAY);
+        cvtColor(img2ROI, gray2, COLOR_BGR2GRAY);
+
+        equalizeHist(gray1, gray1);
+        equalizeHist(gray2, gray2);
+
+        vector<Point2f> corners1;
+        vector<Point2f> corners2;
+
+        vector<uchar> status;
+        vector<float> errors;
+
+        cv::goodFeaturesToTrack(gray1, corners1, 32, 0.01, 4);
+
+        //status.resize(corners1.size());
+       
+        cv::calcOpticalFlowPyrLK(gray1, gray2, corners1, corners2, status, errors, Size(16,16));
+
+        //cout << corners1 << endl;
+
+        //cout << corners2 << endl;
+
+        float xsum = 0;
+        float ysum = 0;
+        int matches = 0;
+
+        for (int i = 0; i < corners1.size(); i++) 
+        {
+            if(status[i]==1)
+            {
+                matches++;
+                xsum += corners2[i].x - corners1[i].x;
+                ysum += corners2[i].y - corners1[i].y;
+            }
+        }
+        xsum /= matches;
+        ysum /= matches;
+
+
+        offsets.push_back(Point((int)xsum + x2 - x1, (int)ysum + y2 - y1));
+
+        Point testPoint((int)xsum, (int)ysum);
+        Mat concatcone = draw_features(img1ROI, img2ROI, corners1, corners2);
+        resize(concatcone, concatcone, Size(500,250));
+       
+        imshow("yeet", concatcone);
+        waitKey(1);
+
+        
+
+    }
+
+    return offsets;
+
+}
+
+std::vector<cv::Point3d> cone_positions(std::vector<bbox_t> result_vec1, std::vector<cv::Point> offsets, cv::Mat P1, cv::Mat P2, cv::Mat ground_R, cv::Mat ground_t)
+{
+    vector<Point2d> Points2D_1;
+    vector<Point2d> Points2D_2;
+
+
+    Mat points3D;
+
+    for(int m = 0; m < result_vec1.size(); m++)
+    {
+        Points2D_1.push_back(Point2d(result_vec1[m].x + result_vec1[m].w/2, result_vec1[m].y + result_vec1[m].h/2));
+        Points2D_2.push_back(Point2d(result_vec1[m].x + result_vec1[m].w/2 + offsets[m].x, result_vec1[m].y + result_vec1[m].h/2 + offsets[m].y));  
+    }
+
+    triangulatePoints(P1, P2, Points2D_1, Points2D_2, points3D);
+    
+    Mat points3D_2;
+    Mat points3D_r = points3D.t();
+    points3D_r = points3D_r.reshape(4);
+    cv::convertPointsFromHomogeneous(points3D_r, points3D_2);
+    
+    cout << "pre 3D:   " << points3D_2 << endl;
+
+    Mat positions[3];
+    vector<Point3d> final_3D_positions;
+
+    split(points3D_2, positions); 
+
+    for(int c = 0; c < points3D_2.rows; c++)
+    {
+        Mat new_3D_points = (Mat_<double>(3,1) << positions[0].at<double>(c), positions[1].at<double>(c), positions[2].at<double>(c));
+        new_3D_points = ground_R.inv() * (new_3D_points);
+        new_3D_points -= ground_R.inv() * (ground_t);
+        cout << "final 3D:   " << new_3D_points << endl;
+        final_3D_positions.push_back(Point3d(new_3D_points.at<double>(0), new_3D_points.at<double>(1), new_3D_points.at<double>(2)));
+    }
+
+    
+
+    return final_3D_positions;
 }
 
