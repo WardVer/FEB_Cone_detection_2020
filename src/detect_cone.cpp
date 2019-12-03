@@ -385,7 +385,12 @@ int main(int argc, char *argv[])
                     //if (extrapolate_flag) {
                     //    cv::putText(draw_frame, "extrapolate", cv::Point2f(10, 40), cv::FONT_HERSHEY_COMPLEX_SMALL, 1.0, cv::Scalar(50, 50, 0), 2);
                     //}
-
+                    cv::Mat map = cv::Mat::zeros(cv::Size(400,400), CV_32FC1);
+                    for(int d = 0; d < detection_data.points3D.size(); d++)
+                    {
+                        cv::circle(map, cv::Point(detection_data.points3D[d].x+200, 400-detection_data.points3D[d].z), 10, cv::Scalar(255,255,255), 2);
+                    }
+                    cv::imshow("map name", map);
                     cv::imshow("window name", draw_frame);
                     int key = cv::waitKey(1);    // 3 or 16ms
                     if (key == 'p') while (true) if (cv::waitKey(100) == 'p') break;
