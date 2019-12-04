@@ -257,10 +257,14 @@ vector<Point> cone_offset(vector<bbox_t> result_vec1, vector<bbox_t> result_vec2
         int w2 = min((int)(result_vec2[a].w), img2.cols - (int)(result_vec2[a].x));
         int h2 = min((int)(result_vec2[a].h), img2.rows - (int)(result_vec2[a].y));
         
+        if(w2 <= 5)
+        {
+            offsets.push_back(Point(x2 - x1, y2 - y1));
+            continue;
+        }
 
         int w = min(w1, w2);
         int h = min(h1, h2);
-
         
         img1ROI = img1(Rect(x1, y1, w, h));
         img2ROI = img2(Rect(x2, y2, w, h));

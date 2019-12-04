@@ -56,17 +56,6 @@ CMAKE_BINARY_DIR = /home/ward/yolow/FEB_Cone_detection_2020/build
 #=============================================================================
 # Targets provided globally by CMake.
 
-# Special rule for the target edit_cache
-edit_cache:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "No interactive CMake dialog available..."
-	/usr/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
-.PHONY : edit_cache
-
-# Special rule for the target edit_cache
-edit_cache/fast: edit_cache
-
-.PHONY : edit_cache/fast
-
 # Special rule for the target rebuild_cache
 rebuild_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
@@ -77,6 +66,17 @@ rebuild_cache:
 rebuild_cache/fast: rebuild_cache
 
 .PHONY : rebuild_cache/fast
+
+# Special rule for the target edit_cache
+edit_cache:
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "No interactive CMake dialog available..."
+	/usr/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
+.PHONY : edit_cache
+
+# Special rule for the target edit_cache
+edit_cache/fast: edit_cache
+
+.PHONY : edit_cache/fast
 
 # The main all target
 all: cmake_check_build_system
@@ -111,30 +111,17 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named calibrate_pics
+# Target rules for targets named Cone_detector
 
 # Build rule for target.
-calibrate_pics: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 calibrate_pics
-.PHONY : calibrate_pics
+Cone_detector: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 Cone_detector
+.PHONY : Cone_detector
 
 # fast build rule for target.
-calibrate_pics/fast:
-	$(MAKE) -f CMakeFiles/calibrate_pics.dir/build.make CMakeFiles/calibrate_pics.dir/build
-.PHONY : calibrate_pics/fast
-
-#=============================================================================
-# Target rules for targets named calibrate
-
-# Build rule for target.
-calibrate: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 calibrate
-.PHONY : calibrate
-
-# fast build rule for target.
-calibrate/fast:
-	$(MAKE) -f CMakeFiles/calibrate.dir/build.make CMakeFiles/calibrate.dir/build
-.PHONY : calibrate/fast
+Cone_detector/fast:
+	$(MAKE) -f CMakeFiles/Cone_detector.dir/build.make CMakeFiles/Cone_detector.dir/build
+.PHONY : Cone_detector/fast
 
 #=============================================================================
 # Target rules for targets named 3d
@@ -150,17 +137,43 @@ calibrate/fast:
 .PHONY : 3d/fast
 
 #=============================================================================
-# Target rules for targets named Cone_detector
+# Target rules for targets named calibrate
 
 # Build rule for target.
-Cone_detector: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 Cone_detector
-.PHONY : Cone_detector
+calibrate: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 calibrate
+.PHONY : calibrate
 
 # fast build rule for target.
-Cone_detector/fast:
-	$(MAKE) -f CMakeFiles/Cone_detector.dir/build.make CMakeFiles/Cone_detector.dir/build
-.PHONY : Cone_detector/fast
+calibrate/fast:
+	$(MAKE) -f CMakeFiles/calibrate.dir/build.make CMakeFiles/calibrate.dir/build
+.PHONY : calibrate/fast
+
+#=============================================================================
+# Target rules for targets named calibrate_pics
+
+# Build rule for target.
+calibrate_pics: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 calibrate_pics
+.PHONY : calibrate_pics
+
+# fast build rule for target.
+calibrate_pics/fast:
+	$(MAKE) -f CMakeFiles/calibrate_pics.dir/build.make CMakeFiles/calibrate_pics.dir/build
+.PHONY : calibrate_pics/fast
+
+#=============================================================================
+# Target rules for targets named camera_test
+
+# Build rule for target.
+camera_test: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 camera_test
+.PHONY : camera_test
+
+# fast build rule for target.
+camera_test/fast:
+	$(MAKE) -f CMakeFiles/camera_test.dir/build.make CMakeFiles/camera_test.dir/build
+.PHONY : camera_test/fast
 
 src/3d_functions.o: src/3d_functions.cpp.o
 
@@ -243,6 +256,33 @@ src/calibrate_pics.cpp.s:
 	$(MAKE) -f CMakeFiles/calibrate_pics.dir/build.make CMakeFiles/calibrate_pics.dir/src/calibrate_pics.cpp.s
 .PHONY : src/calibrate_pics.cpp.s
 
+src/camera_test.o: src/camera_test.cpp.o
+
+.PHONY : src/camera_test.o
+
+# target to build an object file
+src/camera_test.cpp.o:
+	$(MAKE) -f CMakeFiles/camera_test.dir/build.make CMakeFiles/camera_test.dir/src/camera_test.cpp.o
+.PHONY : src/camera_test.cpp.o
+
+src/camera_test.i: src/camera_test.cpp.i
+
+.PHONY : src/camera_test.i
+
+# target to preprocess a source file
+src/camera_test.cpp.i:
+	$(MAKE) -f CMakeFiles/camera_test.dir/build.make CMakeFiles/camera_test.dir/src/camera_test.cpp.i
+.PHONY : src/camera_test.cpp.i
+
+src/camera_test.s: src/camera_test.cpp.s
+
+.PHONY : src/camera_test.s
+
+# target to generate assembly for a file
+src/camera_test.cpp.s:
+	$(MAKE) -f CMakeFiles/camera_test.dir/build.make CMakeFiles/camera_test.dir/src/camera_test.cpp.s
+.PHONY : src/camera_test.cpp.s
+
 src/detect_cone.o: src/detect_cone.cpp.o
 
 .PHONY : src/detect_cone.o
@@ -276,12 +316,13 @@ help:
 	@echo "... all (the default if no target is provided)"
 	@echo "... clean"
 	@echo "... depend"
-	@echo "... edit_cache"
-	@echo "... calibrate_pics"
-	@echo "... calibrate"
-	@echo "... 3d"
 	@echo "... rebuild_cache"
 	@echo "... Cone_detector"
+	@echo "... 3d"
+	@echo "... calibrate"
+	@echo "... calibrate_pics"
+	@echo "... camera_test"
+	@echo "... edit_cache"
 	@echo "... src/3d_functions.o"
 	@echo "... src/3d_functions.i"
 	@echo "... src/3d_functions.s"
@@ -291,6 +332,9 @@ help:
 	@echo "... src/calibrate_pics.o"
 	@echo "... src/calibrate_pics.i"
 	@echo "... src/calibrate_pics.s"
+	@echo "... src/camera_test.o"
+	@echo "... src/camera_test.i"
+	@echo "... src/camera_test.s"
 	@echo "... src/detect_cone.o"
 	@echo "... src/detect_cone.i"
 	@echo "... src/detect_cone.s"

@@ -1,6 +1,7 @@
-/home/ward/yolow/FEB_Cone_detection_2020/build/CMakeFiles/edit_cache.dir
-/home/ward/yolow/FEB_Cone_detection_2020/build/CMakeFiles/calibrate_pics.dir
-/home/ward/yolow/FEB_Cone_detection_2020/build/CMakeFiles/calibrate.dir
-/home/ward/yolow/FEB_Cone_detection_2020/build/CMakeFiles/3d.dir
 /home/ward/yolow/FEB_Cone_detection_2020/build/CMakeFiles/rebuild_cache.dir
 /home/ward/yolow/FEB_Cone_detection_2020/build/CMakeFiles/Cone_detector.dir
+/home/ward/yolow/FEB_Cone_detection_2020/build/CMakeFiles/3d.dir
+/home/ward/yolow/FEB_Cone_detection_2020/build/CMakeFiles/calibrate.dir
+/home/ward/yolow/FEB_Cone_detection_2020/build/CMakeFiles/calibrate_pics.dir
+/home/ward/yolow/FEB_Cone_detection_2020/build/CMakeFiles/camera_test.dir
+/home/ward/yolow/FEB_Cone_detection_2020/build/CMakeFiles/edit_cache.dir

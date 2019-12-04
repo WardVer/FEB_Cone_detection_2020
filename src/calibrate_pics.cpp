@@ -71,7 +71,7 @@ void extrinsics_pics(String location, VideoCapture cap1, VideoCapture cap2)
   std::string picfilename;
 
   int multiplier = 20;
-  int pics = 30;
+  int pics = 20;
 
   FileStorage fs("pairlist.xml", FileStorage::WRITE);
   fs << "strings" << "["; 

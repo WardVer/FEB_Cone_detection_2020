@@ -290,7 +290,7 @@ int main(int argc, char *argv[])
                             int cone2_x = cone1_x + draw_frame1.cols + detection_data.offsets[l].x;
                             int cone2_y = cone1_y + detection_data.offsets[l].y;
 
-                            cv::line(draw_frame_c, cv::Point(cone1_x, cone1_y), cv::Point(cone2_x, cone2_y), cv::Scalar(0,0,255), 3);
+                            cv::line(draw_frame_c, cv::Point(cone1_x, cone1_y), cv::Point(cone2_x, cone2_y), cv::Scalar(50,255,0), 2);
                         }
 
                         detection_data.draw_frame = draw_frame_c;
@@ -385,10 +385,27 @@ int main(int argc, char *argv[])
                     //if (extrapolate_flag) {
                     //    cv::putText(draw_frame, "extrapolate", cv::Point2f(10, 40), cv::FONT_HERSHEY_COMPLEX_SMALL, 1.0, cv::Scalar(50, 50, 0), 2);
                     //}
-                    cv::Mat map = cv::Mat::zeros(cv::Size(400,400), CV_32FC1);
+                    cv::Mat map = cv::Mat::zeros(cv::Size(800,800), CV_8UC3);
+                    map.setTo(cv::Scalar(255,255,255));
+
+                    for(int k = 0; k < map.rows; k+=40)
+                    {
+                        //if(k == map.rows/2) cv::line(map, cv::Point(0, k), cv::Point(map.cols, k), cv::Scalar(0,0,0), 3);
+                        cv::line(map, cv::Point(0, k), cv::Point(map.cols, k), cv::Scalar(0,0,0));
+
+                    }
+
+                    for(int k = 0; k < map.cols; k+=40)
+                    {
+                        if(k == map.cols/2) cv::line(map, cv::Point(k, 0), cv::Point(k, map.rows), cv::Scalar(0,0,0), 3);
+                        cv::line(map, cv::Point(k, 0), cv::Point(k, map.rows), cv::Scalar(0,0,0));
+                    }
+
+
                     for(int d = 0; d < detection_data.points3D.size(); d++)
                     {
-                        cv::circle(map, cv::Point(detection_data.points3D[d].x+200, 400-detection_data.points3D[d].z), 10, cv::Scalar(255,255,255), 2);
+                        cv::circle(map, cv::Point(detection_data.points3D[d].x*4+400, 800-detection_data.points3D[d].z*4), 18, cv::Scalar(0,120,255), 8);
+                        cv::circle(map, cv::Point(detection_data.points3D[d].x*4+400, 800-detection_data.points3D[d].z*4), 3, cv::Scalar(0,120,255), 9);
                     }
                     cv::imshow("map name", map);
                     cv::imshow("window name", draw_frame);

@@ -48,8 +48,9 @@ set(CMAKE_MAKEFILE_PRODUCTS
 
 # Dependency information for all targets:
 set(CMAKE_DEPEND_INFO_FILES
-  "CMakeFiles/calibrate_pics.dir/DependInfo.cmake"
-  "CMakeFiles/calibrate.dir/DependInfo.cmake"
-  "CMakeFiles/3d.dir/DependInfo.cmake"
   "CMakeFiles/Cone_detector.dir/DependInfo.cmake"
+  "CMakeFiles/3d.dir/DependInfo.cmake"
+  "CMakeFiles/calibrate.dir/DependInfo.cmake"
+  "CMakeFiles/calibrate_pics.dir/DependInfo.cmake"
+  "CMakeFiles/camera_test.dir/DependInfo.cmake"
   )
