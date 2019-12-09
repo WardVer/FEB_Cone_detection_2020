@@ -6,6 +6,26 @@
 
 #IncludeRegexTransform: 
 
+.././include/DxImageProc.h
+stdafx.h
+.././include/stdafx.h
+stdlib.h
+-
+string.h
+-
+
+.././include/GxIAPI.h
+stdint.h
+-
+stdint.h
+-
+stdint.h
+-
+stddef.h
+-
+Windows.h
+-
+
 /home/ward/yolow/FEB_Cone_detection_2020/src/calibrate_pics.cpp
 opencv2/opencv.hpp
 -
@@ -17,6 +37,10 @@ opencv2/highgui.hpp
 -
 opencv2/imgproc.hpp
 -
+GxIAPI.h
+/home/ward/yolow/FEB_Cone_detection_2020/src/GxIAPI.h
+DxImageProc.h
+/home/ward/yolow/FEB_Cone_detection_2020/src/DxImageProc.h
 vector
 -
 string

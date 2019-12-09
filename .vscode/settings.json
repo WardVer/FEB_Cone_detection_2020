@@ -53,7 +53,8 @@
         "streambuf": "cpp",
         "thread": "cpp",
         "typeinfo": "cpp",
-        "future": "cpp"
+        "future": "cpp",
+        "cinttypes": "cpp"
     }
     
     

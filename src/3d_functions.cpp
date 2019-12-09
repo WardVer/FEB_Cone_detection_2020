@@ -281,7 +281,7 @@ vector<Point> cone_offset(vector<bbox_t> result_vec1, vector<bbox_t> result_vec2
         vector<uchar> status;
         vector<float> errors;
 
-        cv::goodFeaturesToTrack(gray1, corners1, 32, 0.01, 4);
+        cv::goodFeaturesToTrack(gray1, corners1, 16, 0.1, 4);
 
         //status.resize(corners1.size());
        
@@ -307,7 +307,7 @@ vector<Point> cone_offset(vector<bbox_t> result_vec1, vector<bbox_t> result_vec2
         xsum /= matches;
         ysum /= matches;
 
-
+        
         offsets.push_back(Point((int)xsum + x2 - x1, (int)ysum + y2 - y1));
 
         Point testPoint((int)xsum, (int)ysum);
@@ -315,7 +315,6 @@ vector<Point> cone_offset(vector<bbox_t> result_vec1, vector<bbox_t> result_vec2
         resize(concatcone, concatcone, Size(500,250));
        
         imshow("yeet", concatcone);
-        waitKey(1);
 
         
 
@@ -331,6 +330,8 @@ std::vector<cv::Point3d> cone_positions(std::vector<bbox_t> result_vec1, std::ve
     vector<Point2d> Points2D_2;
 
 
+    
+
     Mat points3D;
 
     for(int m = 0; m < result_vec1.size(); m++)
@@ -339,15 +340,20 @@ std::vector<cv::Point3d> cone_positions(std::vector<bbox_t> result_vec1, std::ve
         Points2D_2.push_back(Point2d(result_vec1[m].x + result_vec1[m].w/2 + offsets[m].x, result_vec1[m].y + result_vec1[m].h/2 + offsets[m].y));  
     }
 
+    cout << offsets << endl;
+    cout << Points2D_1 << endl;
+     
+    cout << Points2D_2 << endl;
+    
+
     triangulatePoints(P1, P2, Points2D_1, Points2D_2, points3D);
     
     Mat points3D_2;
     Mat points3D_r = points3D.t();
     points3D_r = points3D_r.reshape(4);
     cv::convertPointsFromHomogeneous(points3D_r, points3D_2);
+   
     
-    cout << "pre 3D:   " << points3D_2 << endl;
-
     Mat positions[3];
     vector<Point3d> final_3D_positions;
 
@@ -358,7 +364,6 @@ std::vector<cv::Point3d> cone_positions(std::vector<bbox_t> result_vec1, std::ve
         Mat new_3D_points = (Mat_<double>(3,1) << positions[0].at<double>(c), positions[1].at<double>(c), positions[2].at<double>(c));
         new_3D_points = ground_R.inv() * (new_3D_points);
         new_3D_points -= ground_R.inv() * (ground_t);
-        cout << "final 3D:   " << new_3D_points << endl;
         final_3D_positions.push_back(Point3d(new_3D_points.at<double>(0), new_3D_points.at<double>(1), new_3D_points.at<double>(2)));
     }
 

@@ -3,6 +3,8 @@
 
 CMakeFiles/Cone_detector.dir/src/detect_cone.cpp.o
  .././include/3d_functions.hpp
+ .././include/DxImageProc.h
+ .././include/GxIAPI.h
  .././include/yolo_v2_class.hpp
  /home/ward/yolow/FEB_Cone_detection_2020/src/detect_cone.cpp
  /usr/local/include/opencv4/opencv2/calib3d.hpp

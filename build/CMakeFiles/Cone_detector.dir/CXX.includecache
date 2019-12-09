@@ -42,6 +42,26 @@ thread
 algorithm
 -
 
+.././include/DxImageProc.h
+stdafx.h
+.././include/stdafx.h
+stdlib.h
+-
+string.h
+-
+
+.././include/GxIAPI.h
+stdint.h
+-
+stdint.h
+-
+stdint.h
+-
+stddef.h
+-
+Windows.h
+-
+
 .././include/yolo_v2_class.hpp
 memory
 -
@@ -101,6 +121,10 @@ mutex
 -
 cmath
 -
+GxIAPI.h
+/home/ward/yolow/FEB_Cone_detection_2020/src/GxIAPI.h
+DxImageProc.h
+/home/ward/yolow/FEB_Cone_detection_2020/src/DxImageProc.h
 3d_functions.hpp
 /home/ward/yolow/FEB_Cone_detection_2020/src/3d_functions.hpp
 yolo_v2_class.hpp

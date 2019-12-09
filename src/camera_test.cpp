@@ -12,8 +12,7 @@ int main(int argc, char *argv[])
     GX_STATUS
     status = GX_STATUS_SUCCESS;
     GX_DEV_HANDLE hDevice = NULL;
-    uint32_t
-        nDeviceNum = 0;
+    uint32_t nDeviceNum = 0;
     // Initializes the library.
     status = GXInitLib();
     if (status != GX_STATUS_SUCCESS)
@@ -28,7 +27,12 @@ int main(int argc, char *argv[])
     }
     // Opens the device.
     status = GXOpenDeviceByIndex(1, &hDevice);
-    status = GXSetFloat(hDevice, GX_FLOAT_EXPOSURE_TIME, 100000);
+    status = GXSetFloat(hDevice, GX_FLOAT_EXPOSURE_TIME, 20000);
+    status = GXSetFloat(hDevice, GX_FLOAT_GAIN, 16);
+    status = GXSetEnum(hDevice, GX_ENUM_BALANCE_RATIO_SELECTOR, GX_BALANCE_RATIO_SELECTOR_RED);
+    status = GXSetFloat(hDevice, GX_FLOAT_BALANCE_RATIO, 1.4);
+    status = GXSetEnum(hDevice, GX_ENUM_BALANCE_RATIO_SELECTOR, GX_BALANCE_RATIO_SELECTOR_BLUE);
+    status = GXSetFloat(hDevice, GX_FLOAT_BALANCE_RATIO, 1.5);
     if (status == GX_STATUS_SUCCESS)
     {
         // Define the incoming parameters of GXDQBuf.
@@ -38,27 +42,33 @@ int main(int argc, char *argv[])
         if (status == GX_STATUS_SUCCESS)
         {
             // Calls GXDQBuf to get a frame of image.
-            status = GXDQBuf(hDevice, &pFrameBuffer, 1000);
-            if (status == GX_STATUS_SUCCESS)
+            while (1)
             {
-                if (pFrameBuffer->nStatus == GX_FRAME_STATUS_SUCCESS)
+                status = GXDQBuf(hDevice, &pFrameBuffer, 20);
+                if (status == GX_STATUS_SUCCESS)
                 {
-                    
-                    cv::Mat yeet;
-                    yeet.create(pFrameBuffer->nHeight, pFrameBuffer->nWidth, CV_8UC3);
-                    void *pRGB24Buffer = malloc(pFrameBuffer->nWidth * pFrameBuffer->nHeight * 3);
-                    std::cout << pFrameBuffer->nWidth * pFrameBuffer->nHeight * 3 << std::endl;
-                    DxRaw8toRGB24(pFrameBuffer->pImgBuf, pRGB24Buffer, pFrameBuffer->nWidth, pFrameBuffer->nHeight, RAW2RGB_NEIGHBOUR, BAYERRG, true);
-                    std::cout << "yeet "<< std::endl;
-                    memcpy(yeet.data, pRGB24Buffer, pFrameBuffer->nWidth * pFrameBuffer->nHeight * 3);
-                    cv::resize(yeet, yeet, cv::Size(1280, 512));
-                    cv::cvtColor(yeet, yeet, cv::COLOR_BGR2RGB);
-                    cv::imshow("yeet", yeet);
-                    cv::waitKey(0);
+                    if (pFrameBuffer->nStatus == GX_FRAME_STATUS_SUCCESS)
+                    {
+                        std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+                        cv::Mat yeet;
+                        yeet.create(pFrameBuffer->nHeight, pFrameBuffer->nWidth, CV_8UC1);
+                        VxInt32 DxStatus = DxBrightness(pFrameBuffer->pImgBuf,pFrameBuffer->pImgBuf,pFrameBuffer->nWidth * pFrameBuffer->nHeight,0);
+                        memcpy(yeet.data, pFrameBuffer->pImgBuf, pFrameBuffer->nWidth * pFrameBuffer->nHeight);                                          
+                        cv::cvtColor(yeet, yeet, cv::COLOR_BayerRG2RGB);
+                        cv::resize(yeet, yeet, cv::Size(1280, 512));
+
+                        cv::flip(yeet,yeet, 0);
+                        cv::imshow("yeet", yeet);
+                        cv::waitKey(1);
+
+                        std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+                        std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
+
+                    }
+                    // Calls GXQBuf to put the image buffer back into the library
+                    //and continue acquiring.
+                    status = GXQBuf(hDevice, pFrameBuffer);
                 }
-                // Calls GXQBuf to put the image buffer back into the library
-                //and continue acquiring.
-                status = GXQBuf(hDevice, pFrameBuffer);
             }
         }
         // Sends a stop acquisition command.

@@ -19,9 +19,9 @@ add_executable(calibrate_pics ./src/calibrate_pics.cpp)
 add_executable(camera_test ./src/camera_test.cpp)
 
 Target_link_libraries(3d ${OpenCV_LIBS})
-Target_link_libraries(Cone_detector dark ${OpenCV_LIBS} 3d)
+Target_link_libraries(Cone_detector dark ${OpenCV_LIBS} 3d gxiapi)
 Target_link_libraries(calibrate ${OpenCV_LIBS})
-Target_link_libraries(calibrate_pics ${OpenCV_LIBS})
+Target_link_libraries(calibrate_pics ${OpenCV_LIBS} gxiapi)
 Target_link_libraries(camera_test ${OpenCV_LIBS} gxiapi)
 
 
