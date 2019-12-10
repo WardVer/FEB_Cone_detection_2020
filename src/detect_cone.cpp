@@ -48,9 +48,14 @@ std::atomic<int> fps_cap_counter(0), fps_det_counter(0);
 std::atomic<int> current_fps_cap(0), current_fps_det(0);
 std::atomic<bool> exit_flag(false);
 std::chrono::steady_clock::time_point steady_start, steady_end;
+std::atomic<bool> detected;
+std::mutex mtx;
 int video_fps = 30;
 
-cv::Size const frame_size = cv::Size(1280, 1024);
+
+
+
+cv::Size const frame_size = cv::Size(832, 832);
 
 void draw_boxes(cv::Mat mat_img, std::vector<bbox_t> result_vec,
                 int current_det_fps = -1, int current_cap_fps = -1)
@@ -107,7 +112,7 @@ public:
         do
         {
             while (!a_ptr.load())
-                std::this_thread::sleep_for(std::chrono::milliseconds(2));
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             ptr.reset(a_ptr.exchange(NULL));
         } while (!ptr);
         T obj = *ptr;
@@ -135,35 +140,38 @@ static void GX_STDC OnFrameCallbackFun(GX_FRAME_CALLBACK_PARAM *pFrame)
     uint64_t frame_id = 0;
     detection_data_t detection_data;
 
+    std::chrono::steady_clock::time_point capture_begin;
+    std::chrono::steady_clock::time_point capture_end;
+
     if (pFrame->status == 0)
     {
+        capture_begin = std::chrono::steady_clock::now();
         detection_data = detection_data_t();
         cv::Mat image;
         image.create(pFrame->nHeight, pFrame->nWidth, CV_8UC1);
-        VxInt32 DxStatus = DxBrightness((void *)pFrame->pImgBuf, (void *)pFrame->pImgBuf, pFrame->nWidth * pFrame->nHeight, 0);
-        memcpy(image.data, pFrame->pImgBuf, pFrame->nWidth * pFrame->nHeight);
+        //memcpy(image.data, pFrame->pImgBuf, pFrame->nWidth * pFrame->nHeight);
+        image.data = (uchar*)pFrame->pImgBuf;
         cv::cvtColor(image, image, cv::COLOR_BayerRG2RGB);
-        cv::flip(image, image, 0);
-        cv::flip(image, image, 1);
-
+        
+        
         detection_data.cap_frame1 = image(cv::Rect(0, 0, 1280, 1024));
         detection_data.cap_frame2 = image(cv::Rect(1280, 0, 1280, 1024));
+        
+        cv::resize(detection_data.cap_frame1, detection_data.cap_frame1, cv::Size(832,832));
+        cv::resize(detection_data.cap_frame2, detection_data.cap_frame2, cv::Size(832,832));
+        
+        
 
         fps_cap_counter++;
         detection_data.frame_id = frame_id++;
-        if (detection_data.cap_frame1.empty() || detection_data.cap_frame1.empty())
-        {
-            std::cout << " exit_flag: detection_data.cap_frame1.size = " << detection_data.cap_frame1.size() << std::endl;
-            std::cout << " exit_flag: detection_data.cap_frame2.size = " << detection_data.cap_frame2.size() << std::endl;
-            detection_data.exit_flag = true;
-            detection_data.cap_frame1 = cv::Mat(frame_size, CV_8UC3);
-            detection_data.cap_frame2 = cv::Mat(frame_size, CV_8UC3);
-        }
-        /*cv::imshow("frame1", detection_data.cap_frame1);
-        cv::imshow("frame2", detection_data.cap_frame2);
-        cv::waitKey(1);*/
+
         cap2prepare.send(detection_data);
         cap2draw.send(detection_data);
+
+        capture_end = std::chrono::steady_clock::now();
+        
+        std::cout << "capturee time = " << std::chrono::duration_cast<std::chrono::microseconds>(capture_end - capture_begin).count() << "[µs]" << std::endl;
+
     }
     return;
 }
@@ -174,6 +182,7 @@ int main(int argc, char *argv[])
     std::string cfg_file = "cfg/3cones.cfg";
     std::string weights_file = "weights/3cones_last.weights";
     std::string filename;
+    detected = true;
 
     float const thresh = 0.2;
 
@@ -197,6 +206,7 @@ int main(int argc, char *argv[])
             cv::Mat K2;
             cv::Mat D1;
             cv::Mat D2;
+            GX_DEV_HANDLE hDevice = NULL;
 
             read_extrinsics(&R, &T);
             read_intrinsics(&K1, &D1, &K2, &D2);
@@ -210,8 +220,10 @@ int main(int argc, char *argv[])
             if (t_cap.joinable())
                 t_cap.join();
             t_cap = std::thread([&]() {
+                std::chrono::steady_clock::time_point begin;
+                std::chrono::steady_clock::time_point end;
                 GX_STATUS status = GX_STATUS_SUCCESS;
-                GX_DEV_HANDLE hDevice = NULL;
+
                 uint32_t nDeviceNum = 0;
 
                 // Initializes the library.
@@ -233,30 +245,21 @@ int main(int argc, char *argv[])
                 status = GXOpenDeviceByIndex(1, &hDevice);
                 if (status == GX_STATUS_SUCCESS)
                 {
-                    status = GXSetFloat(hDevice, GX_FLOAT_EXPOSURE_TIME, 7000);
+                    status = GXSetFloat(hDevice, GX_FLOAT_EXPOSURE_TIME, 4000);
                     status = GXSetFloat(hDevice, GX_FLOAT_GAIN, 16);
                     status = GXSetEnum(hDevice, GX_ENUM_BALANCE_RATIO_SELECTOR, GX_BALANCE_RATIO_SELECTOR_RED);
                     status = GXSetFloat(hDevice, GX_FLOAT_BALANCE_RATIO, 1.4);
                     status = GXSetEnum(hDevice, GX_ENUM_BALANCE_RATIO_SELECTOR, GX_BALANCE_RATIO_SELECTOR_BLUE);
-                    status = GXSetFloat(hDevice, GX_FLOAT_BALANCE_RATIO, 1.5);
+                    status = GXSetFloat(hDevice, GX_FLOAT_BALANCE_RATIO, 1.6);
                     status = GXRegisterCaptureCallback(hDevice, NULL, OnFrameCallbackFun);
+
+                    /*status = GXSetEnum(hDevice, GX_ENUM_TRIGGER_MODE, GX_TRIGGER_MODE_ON);
+                    status = GXSetEnum(hDevice, GX_ENUM_TRIGGER_SOURCE, GX_TRIGGER_SOURCE_SOFTWARE);*/
+
                     // Define the incoming parameters of GXDQBuf.
                     PGX_FRAME_BUFFER pFrameBuffer;
                     // Stream On.
                     status = GXStreamOn(hDevice);
-                    if (status == GX_STATUS_SUCCESS)
-                    {
-                        // Calls GXDQBuf to get a frame of image.
-
-                        do
-                        {
-                            detect2cap.receive();
-
-                            int emStatus = GXSendCommand(hDevice, GX_COMMAND_TRIGGER_SOFTWARE);
-
-                        } while (!exit_flag);
-                        std::cout << " t_cap exit \n";
-                    }
                 }
             });
 
@@ -264,13 +267,18 @@ int main(int argc, char *argv[])
             t_prepare = std::thread([&]() {
                 std::shared_ptr<image_t> det_image;
                 detection_data_t detection_data;
+                std::chrono::steady_clock::time_point begin;
+                std::chrono::steady_clock::time_point end;
                 do
                 {
                     detection_data = cap2prepare.receive();
-
+                    begin = std::chrono::steady_clock::now();
                     det_image = detector.mat_to_image_resize(detection_data.cap_frame1);
                     detection_data.det_image = det_image;
                     prepare2detect.send(detection_data); // detection
+                    end = std::chrono::steady_clock::now();
+                    std::cout << "process time = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
+
 
                 } while (!detection_data.exit_flag);
                 std::cout << " t_prepare exit \n";
@@ -280,11 +288,16 @@ int main(int argc, char *argv[])
             if (t_detect.joinable())
                 t_detect.join();
             t_detect = std::thread([&]() {
+                std::chrono::steady_clock::time_point begin;
+                std::chrono::steady_clock::time_point end;
                 std::shared_ptr<image_t> det_image;
                 detection_data_t detection_data;
+
                 do
                 {
+
                     detection_data = prepare2detect.receive();
+                    begin = std::chrono::steady_clock::now();
                     det_image = detection_data.det_image;
                     std::vector<bbox_t> result_vec;
 
@@ -296,6 +309,10 @@ int main(int argc, char *argv[])
                     detection_data.result_vec1 = result_vec;
                     detect2threed.send(detection_data);
                     detect2cap.send(detection_data);
+                    end = std::chrono::steady_clock::now();
+                    std::cout << "detect time = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
+
+
                 } while (!detection_data.exit_flag);
                 std::cout << " t_detect exit \n";
             });
@@ -303,6 +320,8 @@ int main(int argc, char *argv[])
             // draw rectangles (and track objects)
             t_draw = std::thread([&]() {
                 detection_data_t detection_data;
+                std::chrono::steady_clock::time_point begin;
+                std::chrono::steady_clock::time_point end;
                 do
                 {
 
@@ -310,12 +329,14 @@ int main(int argc, char *argv[])
                     if (threed2draw.is_object_present())
                     { // use old captured frame
                         detection_data = threed2draw.receive();
+                        begin = std::chrono::steady_clock::now();
                     }
                     // get new Captured frame
                     else
                     {
                         detection_data_t old_detection_data = detection_data;
                         detection_data = cap2draw.receive();
+                        begin = std::chrono::steady_clock::now();
                         cv::Mat draw_frame1 = detection_data.cap_frame1;
                         cv::Mat draw_frame2 = detection_data.cap_frame2;
                         cv::Mat draw_frame_c;
@@ -324,14 +345,20 @@ int main(int argc, char *argv[])
                         detection_data.points3D = old_detection_data.points3D;
                         detection_data.result_vec1 = old_detection_data.result_vec1;
                     }
+
+                    /*
+
                     cv::Mat draw_frame1 = detection_data.cap_frame1.clone();
                     cv::Mat draw_frame2 = detection_data.cap_frame2.clone();
                     cv::Mat draw_frame_c;
                     std::vector<bbox_t> result_vec1 = detection_data.result_vec1;
                     std::vector<bbox_t> result_vec2 = detection_data.result_vec2;
 
+                    
+
                     draw_boxes(draw_frame1, result_vec1, current_fps_det, current_fps_cap);
                     draw_boxes(draw_frame2, result_vec2, current_fps_det, current_fps_cap);
+
 
                     cv::hconcat(draw_frame1, draw_frame2, draw_frame_c);
 
@@ -346,8 +373,11 @@ int main(int argc, char *argv[])
                         cv::line(draw_frame_c, cv::Point(cone1_x, cone1_y), cv::Point(cone2_x, cone2_y), cv::Scalar(00, 0, 0), 2);
                     }
 
-                    detection_data.draw_frame = draw_frame_c;
+                    detection_data.draw_frame = draw_frame_c;*/
                     draw2show.send(detection_data);
+                    end = std::chrono::steady_clock::now();
+                    std::cout << "draw time = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
+
 
                 } while (!detection_data.exit_flag);
                 std::cout << " t_draw exit \n";
@@ -357,10 +387,13 @@ int main(int argc, char *argv[])
 
             t_3d = std::thread([&]() {
                 detection_data_t detection_data;
+                std::chrono::steady_clock::time_point begin;
+                std::chrono::steady_clock::time_point end;
                 do
                 {
 
                     detection_data = detect2threed.receive();
+                    begin = std::chrono::steady_clock::now();
                     std::vector<bbox_t> const result_vec = detection_data.result_vec1;
 
                     if (result_vec.size() == 0)
@@ -377,12 +410,12 @@ int main(int argc, char *argv[])
                         rough_2d = estimate_2d(rough_3d, R, T, K2, camera_data[0], camera_data[1]);
                         rough_2d_vec.push_back(rough_2d);
                     }
-                    std::vector<bbox_t> new_result_vec = new_boxes(result_vec, rough_2d_vec);
+                    std::vector<bbox_t> new_result_vec = new_boxes(&result_vec, rough_2d_vec);
 
                     detection_data.result_vec2 = new_result_vec;
 
                     std::vector<cv::Point> offsets;
-                    offsets = cone_offset(result_vec, new_result_vec, detection_data.cap_frame1, detection_data.cap_frame2);
+                    offsets = cone_offset(&result_vec, &new_result_vec, detection_data.cap_frame1, detection_data.cap_frame2);
 
                     cv::Mat P2;
                     hconcat(R, T, P2);
@@ -392,11 +425,13 @@ int main(int argc, char *argv[])
                     P1 = K1 * P1;
 
                     detection_data.offsets = offsets;
-                    std::vector<cv::Point3d> points3D = cone_positions(result_vec, offsets, P1, P2, camera_data[0], camera_data[1]);
+                    std::vector<cv::Point3d> points3D = cone_positions(&result_vec, offsets, P1, P2, camera_data[0], camera_data[1]);
 
                     detection_data.points3D = points3D;
 
                     threed2draw.send(detection_data);
+                    end = std::chrono::steady_clock::now();
+                    std::cout << "3D time = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
 
                 } while (!detection_data.exit_flag);
                 std::cout << " t_draw exit \n";
@@ -405,6 +440,8 @@ int main(int argc, char *argv[])
             // show detection
 
             cv::startWindowThread();
+            std::chrono::steady_clock::time_point begin;
+            std::chrono::steady_clock::time_point end;
 
             detection_data_t detection_data;
 
@@ -426,7 +463,7 @@ int main(int argc, char *argv[])
 
             do
             {
-                
+
                 steady_end = std::chrono::steady_clock::now();
                 float time_sec = std::chrono::duration<double>(steady_end - steady_start).count();
                 if (time_sec >= 1)
@@ -439,16 +476,16 @@ int main(int argc, char *argv[])
                 }
 
                 detection_data = draw2show.receive();
+                begin = std::chrono::steady_clock::now();
 
-                
                 cv::Mat draw_frame;
-                cv::resize(detection_data.draw_frame, draw_frame, cv::Size(1280, 512));
+                //cv::resize(detection_data.draw_frame, draw_frame, cv::Size(1280, 512));
 
                 //if (extrapolate_flag) {
                 //    cv::putText(draw_frame, "extrapolate", cv::Point2f(10, 40), cv::FONT_HERSHEY_COMPLEX_SMALL, 1.0, cv::Scalar(50, 50, 0), 2);
                 //}
 
-                std::cout << detection_data.points3D << std::endl;
+                //std::cout << detection_data.points3D << std::endl;
 
                 cv::Mat map_copy;
                 map.copyTo(map_copy);
@@ -458,10 +495,10 @@ int main(int argc, char *argv[])
                     cv::circle(map_copy, cv::Point(detection_data.points3D[d].x * 4 + 400, 800 - detection_data.points3D[d].z * 4), 18, cv::Scalar(0, 120, 255), 8);
                     cv::circle(map_copy, cv::Point(detection_data.points3D[d].x * 4 + 400, 800 - detection_data.points3D[d].z * 4), 3, cv::Scalar(0, 120, 255), 9);
                 }
-                
+
                 std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
                 cv::imshow("map", map_copy);
-                cv::imshow("overview", draw_frame);
+                //cv::imshow("overview", draw_frame);
                 int key = cv::waitKey(1); // 3 or 16ms
                 if (key == 'p')
                     while (true)
@@ -473,10 +510,10 @@ int main(int argc, char *argv[])
                     exit_flag = true;
                 }
 
-                std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-                //std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
+                end = std::chrono::steady_clock::now();
+                std::cout << "show time = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
 
-                //std::cout << " current_fps_det = " << current_fps_det << ", current_fps_cap = " << current_fps_cap << std::endl;
+                std::cout << " current_fps_det = " << current_fps_det << ", current_fps_cap = " << current_fps_cap << std::endl;
             } while (!detection_data.exit_flag);
             std::cout << " show detection exit \n";
 

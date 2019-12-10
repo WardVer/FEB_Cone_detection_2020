@@ -161,7 +161,7 @@ int main(int argc, char **argv)
   status = GXOpenDeviceByIndex(1, &hDevice);
   if (status == GX_STATUS_SUCCESS)
   {
-    status = GXSetFloat(hDevice, GX_FLOAT_EXPOSURE_TIME, 10000);
+    status = GXSetFloat(hDevice, GX_FLOAT_EXPOSURE_TIME, 2000);
     status = GXSetFloat(hDevice, GX_FLOAT_GAIN, 16);
     status = GXSetEnum(hDevice, GX_ENUM_BALANCE_RATIO_SELECTOR, GX_BALANCE_RATIO_SELECTOR_RED);
     status = GXSetFloat(hDevice, GX_FLOAT_BALANCE_RATIO, 1.4);
@@ -184,13 +184,12 @@ int main(int argc, char **argv)
 
             cv::Mat image;
             image.create(pFrameBuffer->nHeight, pFrameBuffer->nWidth, CV_8UC1);
-            VxInt32 DxStatus = DxBrightness((void *)pFrameBuffer->pImgBuf, (void *)pFrameBuffer->pImgBuf, pFrameBuffer->nWidth * pFrameBuffer->nHeight, 50);
+            VxInt32 DxStatus = DxBrightness((void *)pFrameBuffer->pImgBuf, (void *)pFrameBuffer->pImgBuf, pFrameBuffer->nWidth * pFrameBuffer->nHeight, 100);
             memcpy(image.data, pFrameBuffer->pImgBuf, pFrameBuffer->nWidth * pFrameBuffer->nHeight);
             cv::cvtColor(image, image, cv::COLOR_BayerRG2RGB);
-            cv::flip(image, image, 0);
-            cv::flip(image, image, 1);
-            frame1 = image(cv::Rect(0, 0, 1280, 1024));
-            frame2 = image(cv::Rect(1280, 0, 1280, 1024));
+            cv::resize(image, image, cv::Size(1664,832));
+            frame1 = image(cv::Rect(0, 0, 832, 832));
+            frame2 = image(cv::Rect(832, 0, 832, 832));
 
             
 

@@ -59,7 +59,7 @@ int read_intrinsics(Mat *K1, Mat *D1, Mat *K2, Mat *D2)
 }
 
 
-vector<Mat> cam_pose_to_origin(Size boardSize, float squareSize, Mat K, Mat D)
+vector<Mat> cam_pose_to_origin(Size boardSize, float squareSize, Mat & K, Mat & D)
 {
     vector<Point2f> imgPts;
     vector<Point3f> objPts;
@@ -123,7 +123,7 @@ vector<Mat> cam_pose_to_origin(Size boardSize, float squareSize, Mat K, Mat D)
 }
 
 
-cv::Mat estimate_3d(int cone_x, int cone_y, Mat K, Mat ground_R, Mat ground_t)
+cv::Mat estimate_3d(int cone_x, int cone_y, Mat & K, Mat & ground_R, Mat & ground_t)
 {
     
     
@@ -140,7 +140,7 @@ cv::Mat estimate_3d(int cone_x, int cone_y, Mat K, Mat ground_R, Mat ground_t)
 }
 
 
-cv::Mat estimate_2d(Mat rough_3d, Mat R, Mat T, Mat K2, Mat ground_R, Mat ground_t)
+cv::Mat estimate_2d(Mat & rough_3d, Mat & R, Mat & T, Mat & K2, Mat & ground_R, Mat & ground_t)
 {
     //cout << "gt: " << ground_t << endl;
     //cout << "R: " << R << endl;
@@ -169,7 +169,7 @@ cv::Mat estimate_2d(Mat rough_3d, Mat R, Mat T, Mat K2, Mat ground_R, Mat ground
     return rough_2d;
 }
 
-std::vector<bbox_t> new_boxes(std::vector<bbox_t> result_vec, std::vector<Mat> rough_2d_vec)
+std::vector<bbox_t> new_boxes(const std::vector<bbox_t> * result_vec, std::vector<Mat> & rough_2d_vec)
 {
     std::vector<bbox_t> new_2d;
     
@@ -177,9 +177,9 @@ std::vector<bbox_t> new_boxes(std::vector<bbox_t> result_vec, std::vector<Mat> r
 
     
 
-    for (int a = 0; a < result_vec.size(); a++)
+    for (int a = 0; a < result_vec->size(); a++)
     {
-        bbox_t result_copy = result_vec[a];
+        bbox_t result_copy = result_vec->at(a);
         result_copy.x = (int) rough_2d_vec[a].at<double>(0) - (int)(result_copy.w/2);
         result_copy.y = (int) rough_2d_vec[a].at<double>(1) - (int)(result_copy.h);
         new_2d.push_back(result_copy);
@@ -189,7 +189,7 @@ std::vector<bbox_t> new_boxes(std::vector<bbox_t> result_vec, std::vector<Mat> r
 
 }
 
-Mat draw_features(Mat img1, Mat img2, vector<Point2f> corners1, vector<Point2f> corners2)
+Mat draw_features(Mat & img1, Mat & img2, vector<Point2f> & corners1, vector<Point2f> & corners2)
 {
     Mat img1_copy;
     Mat img2_copy;
@@ -223,7 +223,7 @@ Mat draw_features(Mat img1, Mat img2, vector<Point2f> corners1, vector<Point2f> 
 
 }
 
-vector<Point> cone_offset(vector<bbox_t> result_vec1, vector<bbox_t> result_vec2, Mat img1, Mat img2)
+vector<Point> cone_offset(const vector<bbox_t> * result_vec1, const vector<bbox_t> * result_vec2, Mat & img1, Mat & img2)
 {
     Mat img1ROI;
     Mat img2ROI;
@@ -232,7 +232,7 @@ vector<Point> cone_offset(vector<bbox_t> result_vec1, vector<bbox_t> result_vec2
     Mat gray2;
 
     vector<Point> offsets;
-    for (int a = 0; a < result_vec1.size(); a++)
+    for (int a = 0; a < result_vec1->size(); a++)
     {
         /*
         int x1 = max((int)(result_vec1[a].x-result_vec1[a].w/4), 0);
@@ -247,15 +247,15 @@ vector<Point> cone_offset(vector<bbox_t> result_vec1, vector<bbox_t> result_vec2
         */
 
        
-        int x1 = max((int)result_vec1[a].x, 0);
-        int y1 = max((int)result_vec1[a].y, 0);
-        int w1 = min((int)(result_vec1[a].w), img1.cols - (int)(result_vec1[a].x));
-        int h1 = min((int)(result_vec1[a].h), img1.rows - (int)(result_vec1[a].y));
+        int x1 = max((int)result_vec1->at(a).x, 0);
+        int y1 = max((int)result_vec1->at(a).y, 0);
+        int w1 = min((int)(result_vec1->at(a).w), img1.cols - (int)(result_vec1->at(a).x));
+        int h1 = min((int)(result_vec1->at(a).h), img1.rows - (int)(result_vec1->at(a).y));
 
-        int x2 = max((int)(result_vec2[a].x), 0);
-        int y2 = max((int)(result_vec2[a].y), 0);
-        int w2 = min((int)(result_vec2[a].w), img2.cols - (int)(result_vec2[a].x));
-        int h2 = min((int)(result_vec2[a].h), img2.rows - (int)(result_vec2[a].y));
+        int x2 = max((int)(result_vec2->at(a).x), 0);
+        int y2 = max((int)(result_vec2->at(a).y), 0);
+        int w2 = min((int)(result_vec2->at(a).w), img2.cols - (int)(result_vec2->at(a).x));
+        int h2 = min((int)(result_vec2->at(a).h), img2.rows - (int)(result_vec2->at(a).y));
         
         if(w2 <= 5)
         {
@@ -281,7 +281,7 @@ vector<Point> cone_offset(vector<bbox_t> result_vec1, vector<bbox_t> result_vec2
         vector<uchar> status;
         vector<float> errors;
 
-        cv::goodFeaturesToTrack(gray1, corners1, 16, 0.1, 4);
+        cv::goodFeaturesToTrack(gray1, corners1, 32, 0.01, 3);
 
         //status.resize(corners1.size());
        
@@ -314,7 +314,7 @@ vector<Point> cone_offset(vector<bbox_t> result_vec1, vector<bbox_t> result_vec2
         Mat concatcone = draw_features(img1ROI, img2ROI, corners1, corners2);
         resize(concatcone, concatcone, Size(500,250));
        
-        imshow("yeet", concatcone);
+        //imshow("yeet", concatcone);
 
         
 
@@ -324,7 +324,7 @@ vector<Point> cone_offset(vector<bbox_t> result_vec1, vector<bbox_t> result_vec2
 
 }
 
-std::vector<cv::Point3d> cone_positions(std::vector<bbox_t> result_vec1, std::vector<cv::Point> offsets, cv::Mat P1, cv::Mat P2, cv::Mat ground_R, cv::Mat ground_t)
+std::vector<cv::Point3d> cone_positions(const std::vector<bbox_t> * result_vec1, std::vector<cv::Point> & offsets, cv::Mat & P1, cv::Mat & P2, cv::Mat & ground_R, cv::Mat & ground_t)
 {
     vector<Point2d> Points2D_1;
     vector<Point2d> Points2D_2;
@@ -334,18 +334,13 @@ std::vector<cv::Point3d> cone_positions(std::vector<bbox_t> result_vec1, std::ve
 
     Mat points3D;
 
-    for(int m = 0; m < result_vec1.size(); m++)
+    for(int m = 0; m < result_vec1->size(); m++)
     {
-        Points2D_1.push_back(Point2d(result_vec1[m].x + result_vec1[m].w/2, result_vec1[m].y + result_vec1[m].h/2));
-        Points2D_2.push_back(Point2d(result_vec1[m].x + result_vec1[m].w/2 + offsets[m].x, result_vec1[m].y + result_vec1[m].h/2 + offsets[m].y));  
+        Points2D_1.push_back(Point2d(result_vec1->at(m).x + result_vec1->at(m).w/2, result_vec1->at(m).y + result_vec1->at(m).h/2));
+        Points2D_2.push_back(Point2d(result_vec1->at(m).x + result_vec1->at(m).w/2 + offsets[m].x, result_vec1->at(m).y + result_vec1->at(m).h/2 + offsets[m].y));  
     }
 
-    cout << offsets << endl;
-    cout << Points2D_1 << endl;
-     
-    cout << Points2D_2 << endl;
     
-
     triangulatePoints(P1, P2, Points2D_1, Points2D_2, points3D);
     
     Mat points3D_2;

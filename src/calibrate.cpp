@@ -182,7 +182,7 @@ StereoCalib(const vector<string>& pairImagelist, const vector<string>& imagelist
     undistort(img, dst, K[0], D[0]);
     
     
-    
+    /*
     while(1)
     {
         imshow("distorted", img);
@@ -205,7 +205,7 @@ StereoCalib(const vector<string>& pairImagelist, const vector<string>& imagelist
         imshow("distorted", dst);
         key = waitKey(0);
         if(key == 27) break;
-    }
+    }*/
     
     Mat img1;
     Mat img2;

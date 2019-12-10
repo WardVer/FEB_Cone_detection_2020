@@ -148,7 +148,7 @@ private:
         int w = mat.cols;
         int h = mat.rows;
         int c = mat.channels();
-        image_t im = make_image_custom(w, h, c);
+        image_t im = make_image_custom(w, h, c);/*
         unsigned char *data = (unsigned char *)mat.data;
         int step = mat.step;
         for (int y = 0; y < h; ++y) {
@@ -157,7 +157,18 @@ private:
                     im.data[k*w*h + y*w + x] = data[y*step + x*c + k] / 255.0f;
                 }
             }
-        }
+        }*/
+        
+        mat.convertTo(mat, CV_32FC3);
+        mat = mat / 255.0f;
+        std::vector<cv::Mat> rgb(3);
+
+        cv::split(mat, rgb);
+
+        memcpy(im.data, rgb[0].data, h*w*sizeof(float));
+        memcpy(im.data + h*w, rgb[1].data, h*w*sizeof(float));
+        memcpy(im.data + 2*h*w, rgb[2].data, h*w*sizeof(float));
+
         return im;
     }
 
