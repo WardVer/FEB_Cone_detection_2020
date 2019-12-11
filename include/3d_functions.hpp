@@ -34,6 +34,6 @@ std::vector<bbox_t> new_boxes(const std::vector<bbox_t> * result_vec, std::vecto
 
 cv::Mat draw_features(cv::Mat & img1,cv::Mat & img2, std::vector<cv::Point2f> & corners1, std::vector<cv::Point2f> & corners2);
 
-std::vector<cv::Point> cone_offset(const std::vector<bbox_t> * result_vec1, const std::vector<bbox_t> * result_vec2, cv::Mat & img1, cv::Mat & img2);
+std::vector<cv::Point2f> cone_offset(const std::vector<bbox_t> * result_vec1, const std::vector<bbox_t> * result_vec2, cv::Mat & img1, cv::Mat & img2);
 
-std::vector<cv::Point3d> cone_positions(const std::vector<bbox_t> * result_vec1, std::vector<cv::Point> & offsets, cv::Mat & P1, cv::Mat & P2, cv::Mat & ground_R, cv::Mat & ground_t);
+std::vector<cv::Point3f> cone_positions(const std::vector<bbox_t> * result_vec1, std::vector<cv::Point2f> & offsets, cv::Mat & P1, cv::Mat & P2, cv::Mat & ground_R, cv::Mat & ground_t);

@@ -262,6 +262,7 @@ StereoCalib(const vector<string>& pairImagelist, const vector<string>& imagelist
         }
     }
     nPairImages = pairObjectPoints.size();
+    
     Mat R, F, E;
     Mat T;
 

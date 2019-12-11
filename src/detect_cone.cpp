@@ -36,8 +36,8 @@ struct detection_data_t
     std::vector<bbox_t> result_vec2;
     cv::Mat draw_frame;
     cv::Mat rough_3d;
-    std::vector<cv::Point> offsets;
-    std::vector<cv::Point3d> points3D;
+    std::vector<cv::Point2f> offsets;
+    std::vector<cv::Point3f> points3D;
     bool new_detection;
     uint64_t frame_id;
     bool exit_flag;
@@ -51,6 +51,7 @@ std::chrono::steady_clock::time_point steady_start, steady_end;
 std::atomic<bool> detected;
 std::mutex mtx;
 int video_fps = 30;
+float exposure = 5000;
 
 
 
@@ -112,7 +113,7 @@ public:
         do
         {
             while (!a_ptr.load())
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                std::this_thread::sleep_for(std::chrono::microseconds(200));
             ptr.reset(a_ptr.exchange(NULL));
         } while (!ptr);
         T obj = *ptr;
@@ -154,11 +155,32 @@ static void GX_STDC OnFrameCallbackFun(GX_FRAME_CALLBACK_PARAM *pFrame)
         cv::cvtColor(image, image, cv::COLOR_BayerRG2RGB);
         
         
-        detection_data.cap_frame1 = image(cv::Rect(0, 0, 1280, 1024));
-        detection_data.cap_frame2 = image(cv::Rect(1280, 0, 1280, 1024));
+        detection_data.cap_frame1 = image(cv::Rect(0, 0, 1280, 1024))*2;
+        detection_data.cap_frame2 = image(cv::Rect(1280, 0, 1280, 1024))*2;
         
         cv::resize(detection_data.cap_frame1, detection_data.cap_frame1, cv::Size(832,832));
         cv::resize(detection_data.cap_frame2, detection_data.cap_frame2, cv::Size(832,832));
+
+        cv::Scalar avg;
+        cv::Scalar dev;
+
+        cv::meanStdDev(detection_data.cap_frame1, avg, dev);
+
+        float maxAvg = avg[0];
+        float maxDev = dev[0];
+        for(int p = 1; p < 3; p++)
+        {
+            if(avg[p] > maxAvg) maxAvg = avg[p];
+            if(dev[p] > maxDev) maxDev = dev[p];
+        }
+
+
+        exposure += 16*(exposure/5000)*(100-maxAvg);
+
+        exposure = std::max(exposure, 500.f);
+        exposure = std::min(exposure, 200000.f);
+
+        
         
         
 
@@ -214,7 +236,7 @@ int main(int argc, char *argv[])
             std::vector<cv::Mat> camera_data;
             camera_data = cam_pose_to_origin(cv::Size(9, 6), 3.78f, K1, D1);
 
-            std::thread t_cap, t_process, t_prepare, t_detect, t_3d, t_post, t_draw, t_write, t_network;
+            std::thread t_cap, t_trigger, t_process, t_prepare, t_detect, t_3d, t_post, t_draw, t_write, t_network;
 
             // capture new video-frame
             if (t_cap.joinable())
@@ -245,16 +267,16 @@ int main(int argc, char *argv[])
                 status = GXOpenDeviceByIndex(1, &hDevice);
                 if (status == GX_STATUS_SUCCESS)
                 {
-                    status = GXSetFloat(hDevice, GX_FLOAT_EXPOSURE_TIME, 4000);
+                    status = GXSetFloat(hDevice, GX_FLOAT_EXPOSURE_TIME, 10000);
                     status = GXSetFloat(hDevice, GX_FLOAT_GAIN, 16);
                     status = GXSetEnum(hDevice, GX_ENUM_BALANCE_RATIO_SELECTOR, GX_BALANCE_RATIO_SELECTOR_RED);
-                    status = GXSetFloat(hDevice, GX_FLOAT_BALANCE_RATIO, 1.4);
+                    status = GXSetFloat(hDevice, GX_FLOAT_BALANCE_RATIO, 1.2);
                     status = GXSetEnum(hDevice, GX_ENUM_BALANCE_RATIO_SELECTOR, GX_BALANCE_RATIO_SELECTOR_BLUE);
-                    status = GXSetFloat(hDevice, GX_FLOAT_BALANCE_RATIO, 1.6);
+                    status = GXSetFloat(hDevice, GX_FLOAT_BALANCE_RATIO, 1.8);
                     status = GXRegisterCaptureCallback(hDevice, NULL, OnFrameCallbackFun);
 
-                    /*status = GXSetEnum(hDevice, GX_ENUM_TRIGGER_MODE, GX_TRIGGER_MODE_ON);
-                    status = GXSetEnum(hDevice, GX_ENUM_TRIGGER_SOURCE, GX_TRIGGER_SOURCE_SOFTWARE);*/
+                    status = GXSetEnum(hDevice, GX_ENUM_TRIGGER_MODE, GX_TRIGGER_MODE_ON);
+                    status = GXSetEnum(hDevice, GX_ENUM_TRIGGER_SOURCE, GX_TRIGGER_SOURCE_SOFTWARE);
 
                     // Define the incoming parameters of GXDQBuf.
                     PGX_FRAME_BUFFER pFrameBuffer;
@@ -284,6 +306,16 @@ int main(int argc, char *argv[])
                 std::cout << " t_prepare exit \n";
             });
 
+            t_trigger = std::thread([&]() {
+
+                while(1)
+                {
+                    GXSendCommand(hDevice, GX_COMMAND_TRIGGER_SOFTWARE);
+                    std::this_thread::sleep_for(std::chrono::milliseconds(32));
+                }
+
+            });
+
             // detection by Yolo
             if (t_detect.joinable())
                 t_detect.join();
@@ -297,6 +329,8 @@ int main(int argc, char *argv[])
                 {
 
                     detection_data = prepare2detect.receive();
+                    
+                    GXSetFloat(hDevice, GX_FLOAT_EXPOSURE_TIME, exposure);
                     begin = std::chrono::steady_clock::now();
                     det_image = detection_data.det_image;
                     std::vector<bbox_t> result_vec;
@@ -304,6 +338,8 @@ int main(int argc, char *argv[])
                     if (det_image)
                         result_vec = detector.detect_resized(*det_image, frame_size.width, frame_size.height, thresh, true); // true
                     fps_det_counter++;
+
+                    
 
                     detection_data.new_detection = true;
                     detection_data.result_vec1 = result_vec;
@@ -344,9 +380,10 @@ int main(int argc, char *argv[])
                         detection_data.draw_frame = draw_frame_c;
                         detection_data.points3D = old_detection_data.points3D;
                         detection_data.result_vec1 = old_detection_data.result_vec1;
+                        detection_data.result_vec2 = old_detection_data.result_vec2;
                     }
 
-                    /*
+                    
 
                     cv::Mat draw_frame1 = detection_data.cap_frame1.clone();
                     cv::Mat draw_frame2 = detection_data.cap_frame2.clone();
@@ -373,7 +410,7 @@ int main(int argc, char *argv[])
                         cv::line(draw_frame_c, cv::Point(cone1_x, cone1_y), cv::Point(cone2_x, cone2_y), cv::Scalar(00, 0, 0), 2);
                     }
 
-                    detection_data.draw_frame = draw_frame_c;*/
+                    detection_data.draw_frame = draw_frame_c;
                     draw2show.send(detection_data);
                     end = std::chrono::steady_clock::now();
                     std::cout << "draw time = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
@@ -394,10 +431,17 @@ int main(int argc, char *argv[])
 
                     detection_data = detect2threed.receive();
                     begin = std::chrono::steady_clock::now();
-                    std::vector<bbox_t> const result_vec = detection_data.result_vec1;
+                    std::vector<bbox_t> result_vec = detection_data.result_vec1;
+
+                   
 
                     if (result_vec.size() == 0)
                         continue;
+                    /*
+                    for(int q=0; q< 46 ; q++)
+                    {
+                        result_vec.push_back(result_vec[0]);
+                    }*/
 
                     cv::Mat rough_3d;
                     cv::Mat rough_2d;
@@ -414,7 +458,7 @@ int main(int argc, char *argv[])
 
                     detection_data.result_vec2 = new_result_vec;
 
-                    std::vector<cv::Point> offsets;
+                    std::vector<cv::Point2f> offsets;
                     offsets = cone_offset(&result_vec, &new_result_vec, detection_data.cap_frame1, detection_data.cap_frame2);
 
                     cv::Mat P2;
@@ -425,7 +469,7 @@ int main(int argc, char *argv[])
                     P1 = K1 * P1;
 
                     detection_data.offsets = offsets;
-                    std::vector<cv::Point3d> points3D = cone_positions(&result_vec, offsets, P1, P2, camera_data[0], camera_data[1]);
+                    std::vector<cv::Point3f> points3D = cone_positions(&result_vec, offsets, P1, P2, camera_data[0], camera_data[1]);
 
                     detection_data.points3D = points3D;
 
@@ -479,11 +523,11 @@ int main(int argc, char *argv[])
                 begin = std::chrono::steady_clock::now();
 
                 cv::Mat draw_frame;
-                //cv::resize(detection_data.draw_frame, draw_frame, cv::Size(1280, 512));
+                cv::resize(detection_data.draw_frame, draw_frame, cv::Size(1280, 512));
 
-                //if (extrapolate_flag) {
-                //    cv::putText(draw_frame, "extrapolate", cv::Point2f(10, 40), cv::FONT_HERSHEY_COMPLEX_SMALL, 1.0, cv::Scalar(50, 50, 0), 2);
-                //}
+                /*if (extrapolate_flag) {
+                    cv::putText(draw_frame, "extrapolate", cv::Point2f(10, 40), cv::FONT_HERSHEY_COMPLEX_SMALL, 1.0, cv::Scalar(50, 50, 0), 2);
+                }*/
 
                 //std::cout << detection_data.points3D << std::endl;
 
@@ -492,13 +536,13 @@ int main(int argc, char *argv[])
 
                 for (int d = 0; d < detection_data.points3D.size(); d++)
                 {
-                    cv::circle(map_copy, cv::Point(detection_data.points3D[d].x * 4 + 400, 800 - detection_data.points3D[d].z * 4), 18, cv::Scalar(0, 120, 255), 8);
-                    cv::circle(map_copy, cv::Point(detection_data.points3D[d].x * 4 + 400, 800 - detection_data.points3D[d].z * 4), 3, cv::Scalar(0, 120, 255), 9);
+                    cv::circle(map_copy, cv::Point(detection_data.points3D[d].x * 4 + 000, 800 - detection_data.points3D[d].z * 4), 18, cv::Scalar(0, 120, 255), 8);
+                    cv::circle(map_copy, cv::Point(detection_data.points3D[d].x * 4 + 000, 800 - detection_data.points3D[d].z * 4), 3, cv::Scalar(0, 120, 255), 9);
                 }
 
                 std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
                 cv::imshow("map", map_copy);
-                //cv::imshow("overview", draw_frame);
+                cv::imshow("overview", draw_frame);
                 int key = cv::waitKey(1); // 3 or 16ms
                 if (key == 'p')
                     while (true)

@@ -223,7 +223,7 @@ Mat draw_features(Mat & img1, Mat & img2, vector<Point2f> & corners1, vector<Poi
 
 }
 
-vector<Point> cone_offset(const vector<bbox_t> * result_vec1, const vector<bbox_t> * result_vec2, Mat & img1, Mat & img2)
+vector<Point2f> cone_offset(const vector<bbox_t> * result_vec1, const vector<bbox_t> * result_vec2, Mat & img1, Mat & img2)
 {
     Mat img1ROI;
     Mat img2ROI;
@@ -231,7 +231,7 @@ vector<Point> cone_offset(const vector<bbox_t> * result_vec1, const vector<bbox_
     Mat gray1;
     Mat gray2;
 
-    vector<Point> offsets;
+    vector<Point2f> offsets;
     for (int a = 0; a < result_vec1->size(); a++)
     {
         /*
@@ -281,11 +281,19 @@ vector<Point> cone_offset(const vector<bbox_t> * result_vec1, const vector<bbox_
         vector<uchar> status;
         vector<float> errors;
 
-        cv::goodFeaturesToTrack(gray1, corners1, 32, 0.01, 3);
+        std::chrono::steady_clock::time_point begin;
+        std::chrono::steady_clock::time_point end;
+
+        //begin = std::chrono::steady_clock::now();
+        cv::goodFeaturesToTrack(gray1, corners1, 8, 0.1, 4);
 
         //status.resize(corners1.size());
+        
        
         cv::calcOpticalFlowPyrLK(gray1, gray2, corners1, corners2, status, errors, Size(16,16));
+
+        //end = std::chrono::steady_clock::now();
+        //std::cout << "feature time = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
 
         //cout << corners1 << endl;
 
@@ -308,13 +316,13 @@ vector<Point> cone_offset(const vector<bbox_t> * result_vec1, const vector<bbox_
         ysum /= matches;
 
         
-        offsets.push_back(Point((int)xsum + x2 - x1, (int)ysum + y2 - y1));
+        offsets.push_back(Point2f(xsum + (float)x2 - (float)x1, ysum + (float)y2 - (float)y1));
 
         Point testPoint((int)xsum, (int)ysum);
         Mat concatcone = draw_features(img1ROI, img2ROI, corners1, corners2);
         resize(concatcone, concatcone, Size(500,250));
        
-        //imshow("yeet", concatcone);
+        imshow("yeet", concatcone);
 
         
 
@@ -324,13 +332,11 @@ vector<Point> cone_offset(const vector<bbox_t> * result_vec1, const vector<bbox_
 
 }
 
-std::vector<cv::Point3d> cone_positions(const std::vector<bbox_t> * result_vec1, std::vector<cv::Point> & offsets, cv::Mat & P1, cv::Mat & P2, cv::Mat & ground_R, cv::Mat & ground_t)
+std::vector<cv::Point3f> cone_positions(const std::vector<bbox_t> * result_vec1, std::vector<cv::Point2f> & offsets, cv::Mat & P1, cv::Mat & P2, cv::Mat & ground_R, cv::Mat & ground_t)
 {
     vector<Point2d> Points2D_1;
     vector<Point2d> Points2D_2;
 
-
-    
 
     Mat points3D;
 
@@ -343,6 +349,7 @@ std::vector<cv::Point3d> cone_positions(const std::vector<bbox_t> * result_vec1,
     
     triangulatePoints(P1, P2, Points2D_1, Points2D_2, points3D);
     
+
     Mat points3D_2;
     Mat points3D_r = points3D.t();
     points3D_r = points3D_r.reshape(4);
@@ -350,7 +357,7 @@ std::vector<cv::Point3d> cone_positions(const std::vector<bbox_t> * result_vec1,
    
     
     Mat positions[3];
-    vector<Point3d> final_3D_positions;
+    vector<Point3f> final_3D_positions;
 
     split(points3D_2, positions); 
 
@@ -361,8 +368,6 @@ std::vector<cv::Point3d> cone_positions(const std::vector<bbox_t> * result_vec1,
         new_3D_points -= ground_R.inv() * (ground_t);
         final_3D_positions.push_back(Point3d(new_3D_points.at<double>(0), new_3D_points.at<double>(1), new_3D_points.at<double>(2)));
     }
-
-    
 
     return final_3D_positions;
 }
