@@ -154,35 +154,52 @@ static void GX_STDC OnFrameCallbackFun(GX_FRAME_CALLBACK_PARAM *pFrame)
         image.data = (uchar*)pFrame->pImgBuf;
         cv::cvtColor(image, image, cv::COLOR_BayerRG2RGB);
         
-        
-        detection_data.cap_frame1 = image(cv::Rect(0, 0, 1280, 1024))*2;
-        detection_data.cap_frame2 = image(cv::Rect(1280, 0, 1280, 1024))*2;
+
+        detection_data.cap_frame1 = image(cv::Rect(0, 0, 1280, 1024));
+        detection_data.cap_frame2 = image(cv::Rect(1280, 0, 1280, 1024));
         
         cv::resize(detection_data.cap_frame1, detection_data.cap_frame1, cv::Size(832,832));
         cv::resize(detection_data.cap_frame2, detection_data.cap_frame2, cv::Size(832,832));
+        
+        cv::Mat gray;
+        cv::cvtColor(detection_data.cap_frame1, gray, cv::COLOR_RGB2GRAY);
+        cv::GaussianBlur(gray, gray, cv::Size(5,5), 1);
+        cv::imshow("gray", gray);
+        
+        cv::cvtColor(detection_data.cap_frame1, detection_data.cap_frame1, cv::COLOR_RGB2HSV);
+        cv::cvtColor(detection_data.cap_frame2, detection_data.cap_frame2, cv::COLOR_RGB2HSV);
+        
 
-        cv::Scalar avg;
-        cv::Scalar dev;
+        std::vector<cv::Mat> channels1;
+        std::vector<cv::Mat> channels2;
 
-        cv::meanStdDev(detection_data.cap_frame1, avg, dev);
+        cv::split(detection_data.cap_frame1,channels1);
+        cv::split(detection_data.cap_frame2,channels2);
+        
+        cv::equalizeHist(channels1[2], channels1[2]);
+        cv::equalizeHist(channels2[2], channels2[2]);
 
-        float maxAvg = avg[0];
-        float maxDev = dev[0];
-        for(int p = 1; p < 3; p++)
+        cv::merge(channels1, detection_data.cap_frame1);
+        cv::merge(channels2, detection_data.cap_frame2);
+
+        cv::cvtColor(detection_data.cap_frame1, detection_data.cap_frame1, cv::COLOR_HSV2RGB);
+        cv::cvtColor(detection_data.cap_frame2, detection_data.cap_frame2, cv::COLOR_HSV2RGB);
+        
+        double minval;
+        double maxval;
+
+        cv::minMaxLoc(gray, &minval, &maxval);
+
+        std::cout << exposure << std::endl;
+        
+        if(maxval == 255) 
         {
-            if(avg[p] > maxAvg) maxAvg = avg[p];
-            if(dev[p] > maxDev) maxDev = dev[p];
+            exposure -= 50;
         }
-
-
-        exposure += 16*(exposure/5000)*(100-maxAvg);
-
-        exposure = std::max(exposure, 500.f);
-        exposure = std::min(exposure, 200000.f);
-
-        
-        
-        
+        else
+        {
+            exposure += 50*(254-maxval);
+        }
 
         fps_cap_counter++;
         detection_data.frame_id = frame_id++;
@@ -221,21 +238,10 @@ int main(int argc, char *argv[])
         try
         {
 
-            cv::Mat R;
-            cv::Mat T;
-
-            cv::Mat K1;
-            cv::Mat K2;
-            cv::Mat D1;
-            cv::Mat D2;
+            
             GX_DEV_HANDLE hDevice = NULL;
 
-            read_extrinsics(&R, &T);
-            read_intrinsics(&K1, &D1, &K2, &D2);
-
-            std::vector<cv::Mat> camera_data;
-            camera_data = cam_pose_to_origin(cv::Size(9, 6), 3.78f, K1, D1);
-
+            
             std::thread t_cap, t_trigger, t_process, t_prepare, t_detect, t_3d, t_post, t_draw, t_write, t_network;
 
             // capture new video-frame
@@ -270,9 +276,9 @@ int main(int argc, char *argv[])
                     status = GXSetFloat(hDevice, GX_FLOAT_EXPOSURE_TIME, 10000);
                     status = GXSetFloat(hDevice, GX_FLOAT_GAIN, 16);
                     status = GXSetEnum(hDevice, GX_ENUM_BALANCE_RATIO_SELECTOR, GX_BALANCE_RATIO_SELECTOR_RED);
-                    status = GXSetFloat(hDevice, GX_FLOAT_BALANCE_RATIO, 1.2);
+                    status = GXSetFloat(hDevice, GX_FLOAT_BALANCE_RATIO, 1.3);
                     status = GXSetEnum(hDevice, GX_ENUM_BALANCE_RATIO_SELECTOR, GX_BALANCE_RATIO_SELECTOR_BLUE);
-                    status = GXSetFloat(hDevice, GX_FLOAT_BALANCE_RATIO, 1.8);
+                    status = GXSetFloat(hDevice, GX_FLOAT_BALANCE_RATIO, 1.5);
                     status = GXRegisterCaptureCallback(hDevice, NULL, OnFrameCallbackFun);
 
                     status = GXSetEnum(hDevice, GX_ENUM_TRIGGER_MODE, GX_TRIGGER_MODE_ON);
@@ -426,53 +432,23 @@ int main(int argc, char *argv[])
                 detection_data_t detection_data;
                 std::chrono::steady_clock::time_point begin;
                 std::chrono::steady_clock::time_point end;
+
+
+                projector3D projector(cv::Size(9,6), 3.78f);
+
                 do
                 {
 
                     detection_data = detect2threed.receive();
+                    
                     begin = std::chrono::steady_clock::now();
-                    std::vector<bbox_t> result_vec = detection_data.result_vec1;
-
-                   
-
-                    if (result_vec.size() == 0)
+                    
+                    
+                    if (detection_data.result_vec1.size() == 0)
                         continue;
-                    /*
-                    for(int q=0; q< 46 ; q++)
-                    {
-                        result_vec.push_back(result_vec[0]);
-                    }*/
 
-                    cv::Mat rough_3d;
-                    cv::Mat rough_2d;
-
-                    std::vector<cv::Mat> rough_2d_vec;
-
-                    for (auto &i : result_vec)
-                    {
-                        rough_3d = estimate_3d(int(i.x + i.w / 2), int(i.y + i.h), K1, camera_data[0], camera_data[1]);
-                        rough_2d = estimate_2d(rough_3d, R, T, K2, camera_data[0], camera_data[1]);
-                        rough_2d_vec.push_back(rough_2d);
-                    }
-                    std::vector<bbox_t> new_result_vec = new_boxes(&result_vec, rough_2d_vec);
-
-                    detection_data.result_vec2 = new_result_vec;
-
-                    std::vector<cv::Point2f> offsets;
-                    offsets = cone_offset(&result_vec, &new_result_vec, detection_data.cap_frame1, detection_data.cap_frame2);
-
-                    cv::Mat P2;
-                    hconcat(R, T, P2);
-                    P2 = K2 * P2;
-
-                    cv::Mat P1 = (cv::Mat_<double>(3, 4) << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0);
-                    P1 = K1 * P1;
-
-                    detection_data.offsets = offsets;
-                    std::vector<cv::Point3f> points3D = cone_positions(&result_vec, offsets, P1, P2, camera_data[0], camera_data[1]);
-
-                    detection_data.points3D = points3D;
-
+                    projector.stereo3D(detection_data.cap_frame1, detection_data.cap_frame2, &detection_data.result_vec1, &detection_data.result_vec2, &detection_data.points3D, &detection_data.offsets);
+                    
                     threed2draw.send(detection_data);
                     end = std::chrono::steady_clock::now();
                     std::cout << "3D time = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
@@ -536,8 +512,8 @@ int main(int argc, char *argv[])
 
                 for (int d = 0; d < detection_data.points3D.size(); d++)
                 {
-                    cv::circle(map_copy, cv::Point(detection_data.points3D[d].x * 4 + 000, 800 - detection_data.points3D[d].z * 4), 18, cv::Scalar(0, 120, 255), 8);
-                    cv::circle(map_copy, cv::Point(detection_data.points3D[d].x * 4 + 000, 800 - detection_data.points3D[d].z * 4), 3, cv::Scalar(0, 120, 255), 9);
+                    cv::circle(map_copy, cv::Point(detection_data.points3D[d].x * 4 + 400, 800 - detection_data.points3D[d].z * 4), 18, cv::Scalar(0, 120, 255), 8);
+                    cv::circle(map_copy, cv::Point(detection_data.points3D[d].x * 4 + 400, 800 - detection_data.points3D[d].z * 4), 3, cv::Scalar(0, 120, 255), 9);
                 }
 
                 std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();

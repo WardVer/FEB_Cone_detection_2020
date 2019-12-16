@@ -64,30 +64,28 @@ void extrinsics_pics(String location, Mat frame1, Mat frame2, FileStorage fs, in
   Mat concatframe;
   std::string picfilename;
 
- 
-    if (frame_ID % multiplier == 0)
-    {
-      std::string nr = to_string(frame_ID * 2 / multiplier);
-      picfilename = "pic" + std::string(5 - nr.length(), '0') + nr + ".jpg";
-      string fullpath = location + picfilename;
-      printf("%s\n", fullpath.c_str());
-      imwrite(fullpath, frame1);
-      fs << (fullpath).c_str();
+  if (frame_ID % multiplier == 0)
+  {
+    std::string nr = to_string(frame_ID * 2 / multiplier);
+    picfilename = "pic" + std::string(5 - nr.length(), '0') + nr + ".jpg";
+    string fullpath = location + picfilename;
+    printf("%s\n", fullpath.c_str());
+    imwrite(fullpath, frame1);
+    fs << (fullpath).c_str();
 
-      nr = to_string(frame_ID * 2 / multiplier + 1);
-      picfilename = "pic" + std::string(5 - nr.length(), '0') + nr + ".jpg";
-      fullpath = location + picfilename;
-      imwrite(fullpath, frame2);
-      fs << (fullpath).c_str();
-    }
+    nr = to_string(frame_ID * 2 / multiplier + 1);
+    picfilename = "pic" + std::string(5 - nr.length(), '0') + nr + ".jpg";
+    fullpath = location + picfilename;
+    imwrite(fullpath, frame2);
+    fs << (fullpath).c_str();
+  }
 
-    hconcat(frame1, frame2, concatframe);
-    cv::flip(concatframe, concatframe, 1);
-    resize(concatframe, concatframe, Size(1280, 512));
-    putText(concatframe, to_string(frame_ID / multiplier), Point(50, 50), FONT_HERSHEY_PLAIN, 4, cv::Scalar(0, 255, 100), 2);
-    imshow("yeet", concatframe);
-    waitKey(1);
-  
+  hconcat(frame1, frame2, concatframe);
+  cv::flip(concatframe, concatframe, 1);
+  resize(concatframe, concatframe, Size(1280, 512));
+  putText(concatframe, to_string(frame_ID / multiplier), Point(50, 50), FONT_HERSHEY_PLAIN, 4, cv::Scalar(0, 255, 100), 2);
+  imshow("yeet", concatframe);
+  waitKey(1);
 }
 
 void cam_pics(String location, Mat frame, FileStorage fs, int frame_ID)
@@ -108,9 +106,7 @@ void cam_pics(String location, Mat frame, FileStorage fs, int frame_ID)
   resize(frame, frame, Size(640, 512));
   cv::imshow("image", frame);
   cv::waitKey(1);
-
 }
-
 
 int main(int argc, char **argv)
 {
@@ -120,6 +116,7 @@ int main(int argc, char **argv)
   uint32_t frame_ID = 0;
   FileStorage fs;
   int pausetime = 5;
+  float exposure = 5000;
 
   if (0 == strcmp(argv[1], "extr"))
   {
@@ -161,7 +158,6 @@ int main(int argc, char **argv)
   status = GXOpenDeviceByIndex(1, &hDevice);
   if (status == GX_STATUS_SUCCESS)
   {
-    status = GXSetFloat(hDevice, GX_FLOAT_EXPOSURE_TIME, 10000);
     status = GXSetFloat(hDevice, GX_FLOAT_GAIN, 16);
     status = GXSetEnum(hDevice, GX_ENUM_BALANCE_RATIO_SELECTOR, GX_BALANCE_RATIO_SELECTOR_RED);
     status = GXSetFloat(hDevice, GX_FLOAT_BALANCE_RATIO, 1.4);
@@ -174,7 +170,7 @@ int main(int argc, char **argv)
     status = GXStreamOn(hDevice);
     if (status == GX_STATUS_SUCCESS)
     {
-      while(1)
+      while (1)
       {
         // Calls GXDQBuf to get a frame of image.
         status = GXDQBuf(hDevice, &pFrameBuffer, 1000);
@@ -185,21 +181,38 @@ int main(int argc, char **argv)
 
             cv::Mat image;
             image.create(pFrameBuffer->nHeight, pFrameBuffer->nWidth, CV_8UC1);
-            VxInt32 DxStatus = DxBrightness((void *)pFrameBuffer->pImgBuf, (void *)pFrameBuffer->pImgBuf, pFrameBuffer->nWidth * pFrameBuffer->nHeight, 100);
-            memcpy(image.data, pFrameBuffer->pImgBuf, pFrameBuffer->nWidth * pFrameBuffer->nHeight);
-
-
-            
-
+            image.data = (uchar*)pFrameBuffer->pImgBuf;
             cv::cvtColor(image, image, cv::COLOR_BayerRG2RGB);
-            cv::resize(image, image, cv::Size(1664,832));
+            cv::resize(image, image, cv::Size(1664, 832));
             frame1 = image(cv::Rect(0, 0, 832, 832));
             frame2 = image(cv::Rect(832, 0, 832, 832));
 
-            
+            cv::Scalar avg;
+            cv::Scalar dev;
 
-            if (frame_ID < framerate*pausetime)
+            
+            cv::meanStdDev(frame1, avg, dev);
+
+            float maxAvg = avg[0];
+            float maxDev = dev[0];
+            for (int p = 1; p < 3; p++)
             {
+              if (avg[p] > maxAvg)
+                maxAvg = avg[p];
+              if (dev[p] > maxDev)
+                maxDev = dev[p];
+            }
+
+            exposure += 4 * (120 - maxAvg);
+
+            exposure = std::max(exposure, 500.f);
+            exposure = std::min(exposure, 200000.f);
+
+            GXSetFloat(hDevice, GX_FLOAT_EXPOSURE_TIME, exposure);
+
+            if (frame_ID < framerate * pausetime)
+            {
+
               if (0 == strcmp(argv[1], "extr"))
               {
                 show_msg_in_feed(image, "extrinsics", frame_ID);
@@ -217,10 +230,10 @@ int main(int argc, char **argv)
                 show_msg_in_feed(frame1, "ground", frame_ID);
               }
             }
-            else if (frame_ID >= framerate*pausetime)
+            else if (frame_ID >= framerate * pausetime)
             {
-              
-              int new_frame_ID = frame_ID - framerate*pausetime;
+
+              int new_frame_ID = frame_ID - framerate * pausetime;
 
               if (0 == strcmp(argv[1], "extr"))
               {
@@ -246,11 +259,10 @@ int main(int argc, char **argv)
           // Calls GXQBuf to put the image buffer back into the library
           //and continue acquiring.
           status = GXQBuf(hDevice, pFrameBuffer);
-          if(frame_ID == framerate * pausetime + multiplier*pics)
+          if (frame_ID == framerate * pausetime + multiplier * pics)
           {
             break;
           }
-          
         }
       }
     }
