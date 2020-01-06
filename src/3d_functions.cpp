@@ -298,7 +298,7 @@ void projector3D::cone_offset(const vector<bbox_t> *result_vec1, const vector<bb
 
     Mat gray1;
     Mat gray2;
-
+    
     for (int a = 0; a < result_vec1->size(); a++)
     {
 
@@ -324,91 +324,54 @@ void projector3D::cone_offset(const vector<bbox_t> *result_vec1, const vector<bb
         img1ROI = img1(Rect(x1, y1, w, h));
         img2ROI = img2(Rect(x2, y2, w, h));
 
-        cv::cuda::GpuMat ROI1;
-        cv::cuda::GpuMat ROI2;
-        cv::cuda::GpuMat ROI1g;
-        cv::cuda::GpuMat ROI2g;
+        cvtColor(img1ROI, gray1, COLOR_BGR2GRAY);
+        cvtColor(img2ROI, gray2, COLOR_BGR2GRAY);
 
-        ROI1.upload(img1ROI);
-        ROI2.upload(img2ROI);
-        
-        cv::cuda::cvtColor(ROI1, ROI1g, COLOR_BGR2GRAY);
-        cv::cuda::cvtColor(ROI2, ROI2g, COLOR_BGR2GRAY);
+        equalizeHist(gray1, gray1);
+        equalizeHist(gray2, gray2);
 
-        //cv::cuda::equalizeHist(ROI1g, ROI1g);
-        //cv::cuda::equalizeHist(ROI2g, ROI2g);
+        vector<Point2f> corners1;
+        vector<Point2f> corners2;
 
-        cv::cuda::GpuMat corners1;
-        cv::cuda::GpuMat corners2;
+        vector<uchar> status;
+        vector<float> errors;
 
-        cv::cuda::GpuMat status;
-        cv::cuda::GpuMat errors;
+        std::chrono::steady_clock::time_point begin;
+        std::chrono::steady_clock::time_point end;
 
-        std::chrono::steady_clock::time_point begin1;
-        std::chrono::steady_clock::time_point end1;
-        std::chrono::steady_clock::time_point begin2;
-        std::chrono::steady_clock::time_point end2;
+        begin = std::chrono::steady_clock::now();
+        cv::goodFeaturesToTrack(gray1, corners1, 16, 0.01, 8);
 
-        begin1 = std::chrono::steady_clock::now();
-
-        
-        cv::Ptr<cv::cuda::CornersDetector> cornerDetector = cv::cuda::createGoodFeaturesToTrackDetector(ROI1g.type(), 8, 0.1, 4);
-        cornerDetector->detect(ROI1g, corners1);
-
-        end1 = std::chrono::steady_clock::now();
-        begin2 = std::chrono::steady_clock::now();
         //status.resize(corners1.size());
-        Ptr<cuda::SparsePyrLKOpticalFlow> d_pyrLK_sparse = cuda::SparsePyrLKOpticalFlow::create(cv::Size(21,21));
-        d_pyrLK_sparse->calc(ROI1g, ROI2g, corners1, corners2, status, errors);
 
-        end2 = std::chrono::steady_clock::now();
-        std::cout << "feature time1 = " << std::chrono::duration_cast<std::chrono::microseconds>(end1 - begin1).count() << "[µs]" << std::endl;
-        std::cout << "feature time2 = " << std::chrono::duration_cast<std::chrono::microseconds>(end2 - begin2).count() << "[µs]" << std::endl;
+        cv::calcOpticalFlowPyrLK(gray1, gray2, corners1, corners2, status, errors, Size(64, 64));
+
+        end = std::chrono::steady_clock::now();
+        std::cout << "feature time = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
 
         float xsum = 0;
         float ysum = 0;
         int matches = 0;
 
-        /*std::vector<cv::cuda::GpuMat> corners1p;
-        std::vector<cv::cuda::GpuMat> corners2p;
-
-        cv::cuda::split(corners1, corners1p);*/
-        
-        Mat cpucorners1(corners1);
-        Mat cpucorners2(corners2);
-        Mat cpustatus(status);
-
-        std::vector<Point2f> corners1p;
-        std::vector<Point2f> corners2p;
-
-        
-        for (int i = 0; i < corners1.size().width; i++)
+        for (int i = 0; i < corners1.size(); i++)
         {
-            
-            
-            if (int(cpustatus.at<uchar>(i)) == 1)
+            if (status[i] == 1)
             {
                 matches++;
-                xsum += cpucorners2.at<Vec2f>(0,i)[0] - cpucorners1.at<Vec2f>(0,i)[0];
-                ysum += cpucorners2.at<Vec2f>(0,i)[1] - cpucorners1.at<Vec2f>(0,i)[1];
-
-                corners1p.push_back(Point2f(cpucorners1.at<Vec2f>(0,i)[0], cpucorners1.at<Vec2f>(0,i)[1]));
-                corners2p.push_back(Point2f(cpucorners2.at<Vec2f>(0,i)[0], cpucorners2.at<Vec2f>(0,i)[1]));
-
-                
+                xsum += corners2[i].x - corners1[i].x;
+                ysum += corners2[i].y - corners1[i].y;
             }
         }
-        cout << "xsum:  " << cpustatus.at<float>(2) << endl;
         xsum /= matches;
         ysum /= matches;
 
         offsets->push_back(Point2f(xsum + (float)x2 - (float)x1, ysum + (float)y2 - (float)y1));
-
+        /*
         Point testPoint((int)xsum, (int)ysum);
-        Mat concatcone = draw_features(img1ROI, img2ROI, corners1p, corners2p);
+        Mat concatcone = draw_features(img1ROI, img2ROI, corners1, corners2);
         resize(concatcone, concatcone, Size(500, 250));
 
-        imshow("yeet", concatcone);
+        imshow("yeet", concatcone);*/
     }
 
     return;
@@ -441,7 +404,7 @@ void projector3D::cone_positions(const std::vector<bbox_t> *result_vec1,  std::v
 
     Mat positions[3];
 
-    split(points3D_2, positions);
+    cv::split(points3D_2, positions);
 
     //some transforms to get a usable 3D vector format
     for (int c = 0; c < points3D_2.rows; c++)

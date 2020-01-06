@@ -54,6 +54,8 @@ std::atomic<bool> detected;
 std::mutex mtx;
 int video_fps = 30;
 float exposure = 5000;
+float red_mx = 1;
+float blue_mx = 1;
 
 cv::Size const frame_size = cv::Size(832, 832);
 
@@ -138,6 +140,7 @@ static void GX_STDC OnFrameCallbackFun(GX_FRAME_CALLBACK_PARAM *pFrame)
     GX_DEV_HANDLE hDevice = NULL;
     uint32_t nDeviceNum = 0;
     uint64_t frame_id = 0;
+    
     detection_data_t detection_data;
 
     std::chrono::steady_clock::time_point capture_begin;
@@ -161,40 +164,67 @@ static void GX_STDC OnFrameCallbackFun(GX_FRAME_CALLBACK_PARAM *pFrame)
 
         cv::cuda::GpuMat gray;
         cv::cuda::cvtColor(frame, gray, cv::COLOR_RGB2GRAY);
-        cv::Ptr<cv::cuda::Filter> filter = cv::cuda::createGaussianFilter(gray.type(), gray.type(), cv::Size(5,5), 1);
+        gray.convertTo(gray, CV_8UC1);
+        cv::Ptr<cv::cuda::Filter> filter = cv::cuda::createGaussianFilter(gray.type(), gray.type(), cv::Size(11,11), 1);
         filter->apply(gray, gray);
         //cv::Mat cpugray(gray);
         //cv::imshow("gray", cpugray);
 
-        cv::cuda::cvtColor(frame, frame, cv::COLOR_RGB2HSV);
 
-        std::vector<cv::cuda::GpuMat> channels;
-
-        cv::cuda::split(frame, channels);
-
-        cv::cuda::equalizeHist(channels[2], channels[2]);
-
-        cv::cuda::merge(channels, frame);
-
-        cv::cuda::cvtColor(frame, frame, cv::COLOR_HSV2RGB);
-        
         double minval;
         double maxval;
+        double maxvalr;
+        double maxvalg;
+        double maxvalb;
         cv::Point minloc;
         cv::Point maxloc;
 
-        cv::cuda::minMaxLoc(gray, &minval, &maxval,  &minloc, &maxloc) ;
 
+        std::vector<cv::cuda::GpuMat> channels1;
+
+        cv::cuda::split(frame, channels1);
+
+        cv::cuda::minMaxLoc(channels1[0], &minval, &maxvalr,  &minloc, &maxloc) ;
+        cv::cuda::minMaxLoc(channels1[1], &minval, &maxvalg,  &minloc, &maxloc) ;
+        cv::cuda::minMaxLoc(channels1[2], &minval, &maxvalb,  &minloc, &maxloc) ;
+
+        red_mx += (maxvalg-maxvalr-20)*0.01;
+        blue_mx += (maxvalg-maxvalb)*0.01;
+
+        cv::cuda::cvtColor(frame, frame, cv::COLOR_RGB2HSV);
+
+       
+        cv::Scalar mean;
+        cv::Scalar stdv;
+        cv::cuda::meanStdDev(gray, mean, stdv);
+        cv::cuda::minMaxLoc(gray, &minval, &maxval, &minloc, &maxloc);
+
+        std::cout << mean << std::endl;
+        std::cout << stdv << std::endl;
         std::cout << exposure << std::endl;
 
-        if(maxval == 255) 
+        if(mean[0] >= 120 || maxval >= 255) 
         {
             exposure -= 50;
         }
         else
         {
-            exposure += 50*(254-maxval);
+            exposure += 50;
         }
+
+        
+        std::vector<cv::cuda::GpuMat> channels2;
+    
+        cv::cuda::split(frame, channels2);
+
+        cv::cuda::equalizeHist(channels2[2], channels2[2]);
+
+        cv::cuda::merge(channels2, frame);
+
+        cv::cuda::cvtColor(frame, frame, cv::COLOR_HSV2RGB);
+
+       
+        
 
         cv::Mat cpuframe(frame);
 
@@ -216,9 +246,9 @@ static void GX_STDC OnFrameCallbackFun(GX_FRAME_CALLBACK_PARAM *pFrame)
 
 int main(int argc, char *argv[])
 {
-    std::string names_file = "data/3cones.names";
-    std::string cfg_file = "cfg/3cones.cfg";
-    std::string weights_file = "weights/3cones_last.weights";
+    std::string names_file = "data/all_cones.names";
+    std::string cfg_file = "cfg/all_cones.cfg";
+    std::string weights_file = "weights/all_cones_best.weights";
     std::string filename;
     detected = true;
 
@@ -319,6 +349,8 @@ int main(int argc, char *argv[])
                 {
                     GXSendCommand(hDevice, GX_COMMAND_TRIGGER_SOFTWARE);
                     GXSetFloat(hDevice, GX_FLOAT_EXPOSURE_TIME, exposure);
+                    //GXSetFloat(hDevice, GX_FLOAT_BALANCE_RATIO, red_mx);
+                    //GXSetFloat(hDevice, GX_FLOAT_BALANCE_RATIO, blue_mx);
                     std::this_thread::sleep_for(std::chrono::milliseconds(32));
                 }
             });
